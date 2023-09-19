@@ -651,9 +651,19 @@ rocsparselt_status rocsparselt_matmul_descr_init(const rocsparselt_handle*    ha
 
             int64_t m, n, k;
             //don't need to check the status here, since which was done in validateMatmulDescrArgs().
-            getOriginalSizes(opA, opB, _matA->m, _matA->n, _matB->m, _matB->n, m, n, k);
-            _matA->c_k        = k / 2;
-            _matA->c_ld       = (opA == rocsparselt_operation_transpose ? _matA->c_k : m);
+            getOriginalSizes(
+                opA, opB, _matA->m, _matA->n, _matB->m, _matB->n, _matD->m, _matD->n, m, n, k);
+            if(_matA->m_type == rocsparselt_matrix_type_structured)
+            {
+                _matA->c_k  = k / 2;
+                _matA->c_ld = (opA == rocsparselt_operation_transpose ? _matA->c_k : m);
+            }
+            else
+            {
+                _matB->c_k  = k / 2;
+                _matB->c_ld = (opA == rocsparselt_operation_transpose ? _matA->c_k : n);
+            }
+
             auto _matmulDescr = reinterpret_cast<_rocsparselt_matmul_descr*>(matmulDescr);
             _rocsparselt_matmul_descr tmpDescr(_handle);
             memcpy(_matmulDescr, &tmpDescr, sizeof(_rocsparselt_matmul_descr));

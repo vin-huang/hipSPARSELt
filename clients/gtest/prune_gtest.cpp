@@ -114,6 +114,7 @@ namespace
             }
             else
             {
+                name << '_' << (arg.sparse_b ? "SB" : "SA");
 
                 name << '_' << (char)std::toupper(arg.transA) << (char)std::toupper(arg.transB);
 

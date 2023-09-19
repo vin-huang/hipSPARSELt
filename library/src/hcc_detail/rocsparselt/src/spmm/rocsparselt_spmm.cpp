@@ -348,6 +348,8 @@ rocsparselt_status ConstructRocSparseLtProblem(const char*                      
     batch_stride_c         = matmul_descr->matrix_C->batch_stride;
 
     // matrix D
+    int64_t num_rows_d     = matmul_descr->matrix_D->m;
+    int64_t num_cols_d     = matmul_descr->matrix_D->n;
     int64_t ldd            = matmul_descr->matrix_D->ld;
     int64_t offset_d       = 0;
     int64_t batch_stride_d = 0;
@@ -391,8 +393,8 @@ rocsparselt_status ConstructRocSparseLtProblem(const char*                      
     int64_t bias_stride = matmul_descr->bias_stride;
 
     int64_t m, n, k;
-    auto    status
-        = getOriginalSizes(opA, opB, num_rows_a, num_cols_a, num_rows_b, num_cols_b, m, n, k);
+    auto    status = getOriginalSizes(
+        opA, opB, num_rows_a, num_cols_a, num_rows_b, num_cols_b, num_rows_d, num_cols_d, m, n, k);
     if(status != rocsparselt_status_success)
     {
         log_error(matmul_descr->handle, caller, "A, B matrix size are not matched");
