@@ -322,8 +322,7 @@ public:
                                   const hipsparseLtMatmulAlgSelection_t* alg_sel)
     {
 
-        this->m_status
-            = hipsparseLtMatmulPlanInit(handle, &this->m_plan, matmul, alg_sel);
+        this->m_status = hipsparseLtMatmulPlanInit(handle, &this->m_plan, matmul, alg_sel);
     }
 
     ~hipsparselt_local_matmul_plan()
@@ -531,13 +530,18 @@ void print_strided_batched(
     hipsparselt_cout << std::flush;
 }
 
-inline hipsparseStatus_t
-    expected_hipsparse_status_of_matrix_size(hipsparseLtDatatype_t type, int64_t m, int64_t n, int64_t ld, bool isSparse = false)
+inline hipsparseStatus_t expected_hipsparse_status_of_matrix_size(hipsparseLtDatatype_t type,
+                                                                  int64_t               m,
+                                                                  int64_t               n,
+                                                                  int64_t               ld,
+                                                                  hipsparseOrder_t      order,
+                                                                  bool isSparse = false)
 {
-    int row_ = 8;
-    int col_ = 8;
-    int ld_ = -1;
-#ifdef __HIP_PLATFORM_NVCC__
+    int row_  = 8;
+    int col_  = 8;
+    int ld_   = -1;
+    int bytes = 1;
+#ifdef __HIP_PLATFORM_NVIDIA__
     switch(type)
     {
     case HIPSPARSELT_R_8I:
@@ -550,6 +554,7 @@ inline hipsparseStatus_t
         break;
     case HIPSPARSELT_R_16BF:
     case HIPSPARSELT_R_16F:
+        bytes = 2;
         if(isSparse)
             row_ = col_ = ld_ = 16;
         else
@@ -566,6 +571,10 @@ inline hipsparseStatus_t
     case HIPSPARSELT_R_8BF:
         row_ = col_ = 16;
         break;
+    case HIPSPARSELT_R_16BF:
+    case HIPSPARSELT_R_16F:
+        bytes = 2;
+        break;
     default:
         break;
     }
@@ -574,27 +583,58 @@ inline hipsparseStatus_t
     if(m <= 0 || n <= 0)
         return HIPSPARSE_STATUS_INVALID_VALUE;
 
+#ifdef __HIP_PLATFORM_AMD__
     if(m < row_ || n < col_)
         return HIPSPARSE_STATUS_NOT_SUPPORTED;
 
     if(m % row_ != 0 || n % col_ != 0)
         return HIPSPARSE_STATUS_NOT_SUPPORTED;
+#endif
 
+    {
+        if(order == HIPSPARSE_ORDER_COL)
+        {
 
-    if(m > ld)
-        return HIPSPARSE_STATUS_INVALID_VALUE;
+            if(m > ld)
+                return HIPSPARSE_STATUS_INVALID_VALUE;
 
-    if(ld_ != -1 && ld % ld_ !=0)
-        return HIPSPARSE_STATUS_INVALID_VALUE;
+            if(ld_ != -1 && ld % ld_ != 0)
+                return HIPSPARSE_STATUS_NOT_SUPPORTED;
+#ifdef __HIP_PLATFORM_NVIDIA__
+            if(n * ld * bytes > 4294967295)
+                return HIPSPARSE_STATUS_INVALID_VALUE;
+#endif
+        }
+        else
+        {
+            if(n > ld)
+                return HIPSPARSE_STATUS_INVALID_VALUE;
+
+            if(ld_ != -1 && ld % ld_ != 0)
+                return HIPSPARSE_STATUS_NOT_SUPPORTED;
+#ifdef __HIP_PLATFORM_NVIDIA__
+            if(m * ld * bytes > 4294967295)
+                return HIPSPARSE_STATUS_INVALID_VALUE;
+#endif
+        }
+    }
+
+#ifdef __HIP_PLATFORM_NVIDIA__
+    if(m < row_ || n < col_)
+        return HIPSPARSE_STATUS_NOT_SUPPORTED;
+
+    if(m % row_ != 0 || n % col_ != 0)
+        return HIPSPARSE_STATUS_NOT_SUPPORTED;
+#endif
 
     return HIPSPARSE_STATUS_SUCCESS;
 }
 
-inline hipsparseStatus_t
-    expected_hipsparse_status_of_matrix_stride(int64_t stride, int64_t m, int64_t n, int64_t ld)
-    {
-        if (stride == 0 || stride >= (ld * n))
-           return HIPSPARSE_STATUS_SUCCESS;
-        else
-           return HIPSPARSE_STATUS_INVALID_VALUE;
-    }
+inline hipsparseStatus_t expected_hipsparse_status_of_matrix_stride(
+    int64_t stride, int64_t m, int64_t n, int64_t ld, hipsparseOrder_t order)
+{
+    if(stride == 0 || stride >= (order == HIPSPARSE_ORDER_COL ? ld * n : ld * m))
+        return HIPSPARSE_STATUS_SUCCESS;
+    else
+        return HIPSPARSE_STATUS_INVALID_VALUE;
+}

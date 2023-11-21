@@ -124,6 +124,11 @@ struct Arguments
     int32_t search_iters;
 
     bool sparse_b;
+
+    char orderA;
+    char orderB;
+    char orderC;
+    char orderD;
     /*************************************************************************
      *                     End Of Arguments                                  *
      *************************************************************************/
@@ -184,9 +189,12 @@ struct Arguments
     OPER(c_noalias_d) SEP            \
     OPER(HMM) SEP                    \
     OPER(search) SEP                 \
-    OPER(search_iters) SEP            \
-    OPER(sparse_b) SEP
-
+    OPER(search_iters) SEP           \
+    OPER(sparse_b) SEP               \
+    OPER(orderA) SEP                 \
+    OPER(orderB) SEP                 \
+    OPER(orderC) SEP                 \
+    OPER(orderD) SEP
     // clang-format on
 
     // Validate input format.

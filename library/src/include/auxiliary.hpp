@@ -91,6 +91,22 @@ constexpr hipsparseOperation_t char_to_hipsparselt_operation(char value)
     }
 }
 
+HIPSPARSELT_EXPORT
+constexpr hipsparseOrder_t char_to_hipsparselt_order(char value)
+{
+    switch(value)
+    {
+    case 'C':
+    case 'c':
+        return HIPSPARSE_ORDER_COL;
+    case 'R':
+    case 'r':
+        return HIPSPARSE_ORDER_ROW;
+    default:
+        return static_cast<hipsparseOrder_t>(-1);
+    }
+}
+
 // return precision string for hipsparseLtDatatype_t
 HIPSPARSELT_EXPORT
 constexpr const char* hipsparselt_datatype_to_string(hipsparseLtDatatype_t type)
