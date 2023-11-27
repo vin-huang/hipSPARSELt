@@ -510,7 +510,7 @@ void testing_prune(const Arguments& arg)
                                                           : ldc * M;
     int64_t stride_d    = do_strided_batched              ? arg.stride_d
                           : orderD == HIPSPARSE_ORDER_COL ? ldd * N
-                                                          : ldc * M;
+                                                          : ldd * M;
 
     hipsparselt_local_mat_descr matA(arg.sparse_b ? hipsparselt_matrix_type_dense
                                                   : hipsparselt_matrix_type_structured,
