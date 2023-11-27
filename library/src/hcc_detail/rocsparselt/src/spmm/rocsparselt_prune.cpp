@@ -136,6 +136,77 @@ __host__ __device__ inline void prune_if(bool prune, T* a, T b)
 }
 
 template <typename Ti, typename Tc, int SG0I, int SG1J, int TT0I, int TT1J, bool InPlace>
+__global__ void prune_strip_kernel_row(const Ti* in,
+                                       Ti*       out,
+                                       int64_t   m,
+                                       int64_t   n,
+                                       int64_t   stride1,
+                                       int64_t   stride2,
+                                       int       num_batches,
+                                       int64_t   batch_stride,
+                                       int64_t   sizes)
+{
+    constexpr unsigned int MT0I = SG0I * TT0I;
+    constexpr unsigned int MT1J = SG1J * TT1J;
+
+    unsigned int serial  = hc_get_workitem_id(0);
+    unsigned int sg0I    = serial % SG0I;
+    unsigned int sg1J    = serial / SG0I;
+    unsigned int wg0I    = hc_get_group_id(0);
+    unsigned int wg1J    = hc_get_group_id(1);
+    unsigned int batchId = hc_get_group_id(2);
+
+    if((MT1J * wg1J + sg1J * TT1J) >= n || (MT0I * wg0I + sg0I * TT0I) >= m)
+        return;
+
+    int64_t stride    = sg0I * TT0I * stride2 + sg1J * TT1J * stride1;
+    int64_t wg_stride = MT1J * wg1J * stride1 + MT0I * wg0I * stride2;
+    int64_t b_stride  = batchId * batch_stride;
+
+    int64_t globalReadOffset = b_stride + wg_stride + stride;
+
+    for(int i = 0; i < TT0I; i++)
+    {
+        for(int j = 0; j < TT1J; j += 4)
+        {
+            int64_t offset = globalReadOffset + i * stride2 + j * stride1;
+#if 1
+            Ti values[4];
+#pragma unroll 4
+            for(int k = 0; k < 4; k++)
+            {
+                int64_t pos    = offset + k * stride1;
+                bool    update = pos >= sizes;
+                values[k]      = update ? static_cast<Ti>(0.0f) : in[pos];
+            }
+
+            auto max_norm1 = static_cast<Tc>(-1.0);
+            int  pos_a = 0, pos_b = 0;
+
+#pragma unroll 4
+            for(int a = 0; a < 4; a++)
+            {
+                for(int b = a + 1; b < 4; b++)
+                {
+                    auto norm1_v = norm1<Ti, Tc>(values[a], values[b]);
+                    bool update  = norm1_v > max_norm1;
+                    pos_a        = update ? a : pos_a;
+                    pos_b        = update ? b : pos_b;
+                    max_norm1    = update ? norm1_v : max_norm1;
+                }
+            }
+#endif
+#pragma unroll 4
+            for(int k = 0; k < 4; k++)
+            {
+                int64_t pos = offset + k * stride1;
+                prune_if<Ti, InPlace>(k != pos_a && k != pos_b, &out[pos], values[k]);
+            }
+        }
+    }
+}
+
+template <typename Ti, typename Tc, int SG0I, int SG1J, int TT0I, int TT1J, bool InPlace>
 __global__ void prune_strip_kernel(const Ti* in,
                                    Ti*       out,
                                    int64_t   m,
@@ -152,7 +223,7 @@ __global__ void prune_strip_kernel(const Ti* in,
     unsigned int serial = hc_get_workitem_id(0);
     unsigned int sg0I   = serial % SG0I;
     unsigned int sg1J   = serial / SG0I;
-    int64_t      stride = sg0I * stride1 + sg1J * TT1J * stride2;
+    int64_t      stride = sg0I * TT0I * stride1 + sg1J * TT1J * stride2;
 
     unsigned int wg0I    = hc_get_group_id(0);
     unsigned int wg1J    = hc_get_group_id(1);
@@ -367,7 +438,13 @@ __global__
     }
 }
 
-void get_prune_matrix_size(bool is_sparse_a, rocsparselt_operation op,  _rocsparselt_mat_descr *_sparseMatDescr, int64_t &m, int64_t &n, int64_t &stride0, int64_t &stride1)
+void get_prune_matrix_size(bool                    is_sparse_a,
+                           rocsparselt_operation   op,
+                           _rocsparselt_mat_descr* _sparseMatDescr,
+                           int64_t&                m,
+                           int64_t&                n,
+                           int64_t&                stride0,
+                           int64_t&                stride1)
 {
     if(is_sparse_a)
     {
@@ -382,6 +459,10 @@ void get_prune_matrix_size(bool is_sparse_a, rocsparselt_operation op,  _rocspar
         n       = op == rocsparselt_operation_transpose ? _sparseMatDescr->n : _sparseMatDescr->m;
         stride0 = (op == rocsparselt_operation_transpose) ? 1 : _sparseMatDescr->ld;
         stride1 = (op == rocsparselt_operation_transpose) ? _sparseMatDescr->ld : 1;
+    }
+    if(_sparseMatDescr->order == rocsparselt_order_row)
+    {
+        std::swap(stride0, stride1);
     }
 }
 template <typename Ti, typename Tc>
@@ -400,15 +481,14 @@ rocsparselt_status rocsparselt_smfmac_prune_template(const _rocsparselt_handle* 
 {
     if(pruneAlg == rocsparselt_prune_smfmac_strip)
     {
-        constexpr int SG0I = 16;
-        constexpr int SG1J = 4;
-        constexpr int TT0I = 1;
-        constexpr int TT1J = 4;
-        constexpr int MT0I = SG0I * TT0I;
-        constexpr int MT1J = SG1J * TT1J;
-
-        int block_x = m / MT0I + (m % MT0I > 0 ? 1 : 0);
-        int block_y = n / MT1J + (n % MT1J > 0 ? 1 : 0);
+        constexpr int SG0I    = 16;
+        constexpr int SG1J    = 4;
+        constexpr int TT0I    = 1;
+        constexpr int TT1J    = 4;
+        constexpr int MT0I    = SG0I * TT0I;
+        constexpr int MT1J    = SG1J * TT1J;
+        int           block_x = m / MT0I + (m % MT0I > 0 ? 1 : 0);
+        int           block_y = n / MT1J + (n % MT1J > 0 ? 1 : 0);
 
         void (*func)(const Ti* in,
                      Ti*       out,
@@ -573,7 +653,7 @@ rocsparselt_status rocsparselt_smfmac_prune_impl(const _rocsparselt_handle*    h
     if(batch_stride == 0) //boardcast case.
     {
         num_batches  = 1;
-        batch_stride = matrix->n * ld;
+        batch_stride = matrix->order == rocsparselt_order_column ? matrix->n * ld : matrix->m * ld;
     }
 
 #define PRUNE_PARAMS(T)                                               \
@@ -702,8 +782,9 @@ rocsparselt_status rocsparselt_smfmac_prune(const rocsparselt_handle*       hand
         return rocsparselt_status_not_implemented;
     }
 
-    rocsparselt_operation   op     = _matmulDescr->is_sparse_a ? _matmulDescr->op_A : _matmulDescr->op_B;
-    _rocsparselt_mat_descr *_sparseMatDescr = _matmulDescr->is_sparse_a ? _matmulDescr->matrix_A : _matmulDescr->matrix_B;
+    rocsparselt_operation op = _matmulDescr->is_sparse_a ? _matmulDescr->op_A : _matmulDescr->op_B;
+    _rocsparselt_mat_descr* _sparseMatDescr
+        = _matmulDescr->is_sparse_a ? _matmulDescr->matrix_A : _matmulDescr->matrix_B;
     int64_t m, n, stride0, stride1;
     int64_t ld = _sparseMatDescr->ld;
     get_prune_matrix_size(_matmulDescr->is_sparse_a, op, _sparseMatDescr, m, n, stride0, stride1);
@@ -720,17 +801,8 @@ rocsparselt_status rocsparselt_smfmac_prune(const rocsparselt_handle*       hand
             pruneAlg,
             "stream[in]",
             stream);
-    return rocsparselt_smfmac_prune_impl(_handle,
-                                         _sparseMatDescr,
-                                         m,
-                                         n,
-                                         stride0,
-                                         stride1,
-                                         ld,
-                                         d_in,
-                                         d_out,
-                                         pruneAlg,
-                                         stream);
+    return rocsparselt_smfmac_prune_impl(
+        _handle, _sparseMatDescr, m, n, stride0, stride1, ld, d_in, d_out, pruneAlg, stream);
 }
 
 /********************************************************************************
@@ -876,8 +948,9 @@ rocsparselt_status rocsparselt_smfmac_prune_check(const rocsparselt_handle*     
         return rocsparselt_status_invalid_pointer;
     }
 
-    rocsparselt_operation   op     = _matmulDescr->is_sparse_a ? _matmulDescr->op_A : _matmulDescr->op_B;
-    _rocsparselt_mat_descr *_sparseMatDescr = _matmulDescr->is_sparse_a ? _matmulDescr->matrix_A : _matmulDescr->matrix_B;
+    rocsparselt_operation op = _matmulDescr->is_sparse_a ? _matmulDescr->op_A : _matmulDescr->op_B;
+    _rocsparselt_mat_descr* _sparseMatDescr
+        = _matmulDescr->is_sparse_a ? _matmulDescr->matrix_A : _matmulDescr->matrix_B;
     int64_t m, n, stride0, stride1;
     int64_t ld = _sparseMatDescr->ld;
     get_prune_matrix_size(_matmulDescr->is_sparse_a, op, _sparseMatDescr, m, n, stride0, stride1);
@@ -892,16 +965,8 @@ rocsparselt_status rocsparselt_smfmac_prune_check(const rocsparselt_handle*     
             d_out,
             "stream[in]",
             stream);
-    return rocsparselt_smfmac_prune_check_impl(_handle,
-                                               _sparseMatDescr,
-                                               m,
-                                               n,
-                                               stride0,
-                                               stride1,
-                                               ld,
-                                               d_in,
-                                               d_out,
-                                               stream);
+    return rocsparselt_smfmac_prune_check_impl(
+        _handle, _sparseMatDescr, m, n, stride0, stride1, ld, d_in, d_out, stream);
 }
 
 /********************************************************************************

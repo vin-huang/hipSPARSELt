@@ -217,13 +217,6 @@ inline rocsparselt_status validateMatrixArgs(const _rocsparselt_handle* handle,
         return rocsparselt_status_invalid_size;
     }
 
-    if(order == rocsparselt_order_row)
-    {
-        hipsparselt_cerr << "rocsparselt_order_row is not supported" << std::endl;
-        log_error(handle, __func__, "rocsparselt_order_row is not supported");
-        return rocsparselt_status_not_implemented;
-    }
-
     //TODO should support other datatype in the future.
     switch(valueType)
     {
