@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,7 +42,7 @@
 #include <hipsparselt/hipsparselt.h>
 #include <omp.h>
 
-template <typename T, typename Tb = T, typename To = T>
+template <typename T, typename Tb = T, typename To = T, hipsparseOrder_t order>
 void bias(int64_t m, int64_t n, int64_t ld, T* src, To* dest, Tb* bias)
 {
     auto saturate_i8 = [](Tb val) {
@@ -58,13 +58,17 @@ void bias(int64_t m, int64_t n, int64_t ld, T* src, To* dest, Tb* bias)
 
     using TAccum = std::conditional_t<std::is_same<__half, Tb>::value, float, Tb>;
 
-    for(int i = 0; i < m; i++)
+    for(int64_t i = 0; i < m; i++)
     {
         Tb _bias = *(bias + i);
 #pragma omp parallel for
-        for(int j = 0; j < n; j++)
+        for(int64_t j = 0; j < n; j++)
         {
-            auto   pos = j * ld + i;
+            int64_t pos;
+            if constexpr(order == HIPSPARSE_ORDER_COL)
+                pos = j * ld + i;
+            else
+                pos = i * ld + j;
             TAccum src_Taccum;
             if constexpr(std::is_same<T, TAccum>())
                 src_Taccum = *(src + pos);
@@ -90,10 +94,10 @@ void activation(int64_t m, int64_t n, int64_t ld, Ti* in, To* out, Tact arg1, Ta
     To (*saturate)(Tact val);
     saturate = std::is_same<int8_t, To>() ? saturate_i8 : saturate_o;
 
-    for(int i = 0; i < m; i++)
+    for(int64_t i = 0; i < m; i++)
     {
 #pragma omp parallel for
-        for(int j = 0; j < n; j++)
+        for(int64_t j = 0; j < n; j++)
         {
             auto pos     = j * ld + i;
             auto in_Tact = static_cast<Tact>(*(in + pos));
@@ -279,11 +283,20 @@ void testing_spmm(const Arguments& arg)
     constexpr bool do_batched         = (btype == hipsparselt_batch_type::batched);
     constexpr bool do_strided_batched = (btype == hipsparselt_batch_type::strided_batched);
     int            num_batches        = (do_batched || do_strided_batched ? arg.batch_count : 1);
-    int64_t        stride_a           = do_strided_batched ? arg.stride_a : lda * A_col;
-    int64_t        stride_b           = do_strided_batched ? arg.stride_b : ldb * B_col;
-    int64_t        stride_c           = do_strided_batched ? arg.stride_c : ldc * N;
-    int64_t        stride_d           = do_strided_batched ? arg.stride_c : ldd * N;
+    int64_t        stride_a           = do_strided_batched              ? arg.stride_a
+                                        : orderA == HIPSPARSE_ORDER_COL ? lda * A_col
+                                                                        : lda * A_row;
+    int64_t        stride_b           = do_strided_batched              ? arg.stride_b
+                                        : orderB == HIPSPARSE_ORDER_COL ? ldb * B_col
+                                                                        : ldb * B_row;
+    int64_t        stride_c           = do_strided_batched              ? arg.stride_c
+                                        : orderC == HIPSPARSE_ORDER_COL ? ldc * N
+                                                                        : ldc * M;
+    int64_t        stride_d           = do_strided_batched              ? arg.stride_d
+                                        : orderD == HIPSPARSE_ORDER_COL ? ldd * N
+                                                                        : ldc * M;
     int64_t bias_stride = do_strided_batched ? arg.bias_stride == -1 ? M : arg.bias_stride : 0;
+
     hipsparseLtDatatype_t bias_type
         = arg.bias_type == 0 ? (arg.a_type == HIPSPARSELT_R_8I ? HIPSPARSELT_R_32F : arg.a_type)
                              : arg.bias_type;
@@ -295,7 +308,7 @@ void testing_spmm(const Arguments& arg)
                                      A_col,
                                      lda,
                                      arg.a_type,
-                                     HIPSPARSE_ORDER_COL);
+                                     orderA);
     hipsparselt_local_mat_descr matB(arg.sparse_b ? hipsparselt_matrix_type_structured
                                                   : hipsparselt_matrix_type_dense,
                                      handle,
@@ -303,11 +316,11 @@ void testing_spmm(const Arguments& arg)
                                      B_col,
                                      ldb,
                                      arg.b_type,
-                                     HIPSPARSE_ORDER_COL);
+                                     orderB);
     hipsparselt_local_mat_descr matC(
-        hipsparselt_matrix_type_dense, handle, M, N, ldc, arg.c_type, HIPSPARSE_ORDER_COL);
+        hipsparselt_matrix_type_dense, handle, M, N, ldc, arg.c_type, orderC);
     hipsparselt_local_mat_descr matD(
-        hipsparselt_matrix_type_dense, handle, M, N, ldc, arg.d_type, HIPSPARSE_ORDER_COL);
+        hipsparselt_matrix_type_dense, handle, M, N, ldc, arg.d_type, orderD);
 
     hipsparseStatus_t eStatus = expected_hipsparse_status_of_matrix_size(
         arg.a_type, A_row, A_col, lda, orderA, !arg.sparse_b);
@@ -564,12 +577,20 @@ void testing_spmm(const Arguments& arg)
         hipsparseLtSpMMACompressedSize(handle, plan, &compressed_size, &compress_buffer_size),
         HIPSPARSE_STATUS_SUCCESS);
 
-    const size_t size_A = stride_a == 0 ? lda * A_col * num_batches : stride_a * num_batches;
-    const size_t size_B = stride_b == 0 ? ldb * B_col * num_batches : stride_b * num_batches;
+    const size_t size_A = stride_a == 0
+                              ? (orderA == HIPSPARSE_ORDER_COL ? lda * A_col : lda * A_row)
+                              : stride_a * num_batches;
+    const size_t size_B = stride_b == 0
+                              ? (orderA == HIPSPARSE_ORDER_COL ? ldb * B_col : ldb * B_row)
+                              : stride_b * num_batches;
     const size_t size_pruned_copy
         = arg.unit_check || arg.norm_check || arg.timing ? (arg.sparse_b ? size_B : size_A) : 0;
-    const size_t size_C          = stride_c == 0 ? ldc * N * num_batches : stride_c * num_batches;
-    const size_t size_D          = stride_d == 0 ? ldd * N * num_batches : stride_d * num_batches;
+    const size_t size_C          = stride_c == 0
+                                       ? (orderC == HIPSPARSE_ORDER_COL ? ldc * N : ldc * M) * num_batches
+                                       : stride_c * num_batches;
+    const size_t size_D          = stride_d == 0
+                                       ? (orderD == HIPSPARSE_ORDER_COL ? ldd * N : ldd * M) * num_batches
+                                       : stride_d * num_batches;
     const size_t size_D_copy     = arg.unit_check || arg.norm_check ? size_D : 0;
     const size_t size_D_act_copy = activation_on ? size_D_copy : 0;
 
@@ -597,50 +618,59 @@ void testing_spmm(const Arguments& arg)
     host_vector<Talpha> hD_gold_act(size_D_copy);
     host_vector<To>     hD_1(size_D_copy);
 
+    size_t A_row_r, A_col_r, B_row_r, B_col_r, C_row_r, C_col_r, D_row_r, D_col_r;
+
+    A_row_r = orderA == HIPSPARSE_ORDER_COL ? A_row : A_col;
+    A_col_r = orderA == HIPSPARSE_ORDER_COL ? A_col : A_row;
+    B_row_r = orderB == HIPSPARSE_ORDER_COL ? B_row : B_col;
+    B_col_r = orderB == HIPSPARSE_ORDER_COL ? B_col : B_row;
+    C_row_r = orderC == HIPSPARSE_ORDER_COL ? M : N;
+    C_col_r = orderC == HIPSPARSE_ORDER_COL ? N : M;
+
     // Initial Data on CPU
     if(arg.alpha_isnan<Tc>())
     {
-        hipsparselt_init_nan<Ti>(hA, A_row, A_col, lda, stride_a, num_batches);
-        hipsparselt_init_nan<Ti>(hB, B_row, B_col, ldb, stride_b, num_batches);
+        hipsparselt_init_nan<Ti>(hA, A_row_r, A_col_r, lda, stride_a, num_batches);
+        hipsparselt_init_nan<Ti>(hB, B_row_r, B_col_r, ldb, stride_b, num_batches);
     }
     else
     {
         if(arg.initialization == hipsparselt_initialization::rand_int)
         {
-            hipsparselt_init<Ti>(hA, A_row, A_col, lda, stride_a, num_batches);
-            hipsparselt_init_alternating_sign<Ti>(hB, B_row, B_col, ldb, stride_b, num_batches);
+            hipsparselt_init<Ti>(hA, A_row_r, A_col_r, lda, stride_a, num_batches);
+            hipsparselt_init_alternating_sign<Ti>(hB, B_row_r, B_col_r, ldb, stride_b, num_batches);
         }
         else if(arg.initialization == hipsparselt_initialization::trig_float)
         {
-            hipsparselt_init_sin<Ti>(hA, A_row, A_col, lda, stride_a, num_batches);
-            hipsparselt_init_cos<Ti>(hB, B_row, B_col, ldb, stride_b, num_batches);
+            hipsparselt_init_sin<Ti>(hA, A_row_r, A_col_r, lda, stride_a, num_batches);
+            hipsparselt_init_cos<Ti>(hB, B_row_r, B_col_r, ldb, stride_b, num_batches);
         }
         else if(arg.initialization == hipsparselt_initialization::hpl)
         {
-            hipsparselt_init_hpl<Ti>(hA, A_row, A_col, lda, stride_a, num_batches);
-            hipsparselt_init_hpl<Ti>(hB, B_row, B_col, ldb, stride_b, num_batches);
+            hipsparselt_init_hpl<Ti>(hA, A_row_r, A_col_r, lda, stride_a, num_batches);
+            hipsparselt_init_hpl<Ti>(hB, B_row_r, B_col_r, ldb, stride_b, num_batches);
         }
         else if(arg.initialization == hipsparselt_initialization::special)
         {
-            hipsparselt_init_alt_impl_big<Ti>(hA, A_row, A_col, lda, num_batches);
-            hipsparselt_init_alt_impl_small<Ti>(hB, B_row, B_col, ldb, num_batches);
+            hipsparselt_init_alt_impl_big<Ti>(hA, A_row_r, A_col_r, lda, num_batches);
+            hipsparselt_init_alt_impl_small<Ti>(hB, B_row_r, B_col_r, ldb, num_batches);
         }
     }
 
     if(arg.beta_isnan<Tc>())
     {
-        hipsparselt_init_nan<To>(hC, M, N, ldc, stride_c, num_batches);
+        hipsparselt_init_nan<To>(hC, C_row_r, C_col_r, ldc, stride_c, num_batches);
     }
     else
     {
         if(arg.initialization == hipsparselt_initialization::rand_int)
-            hipsparselt_init<To>(hC, M, N, ldc, stride_c, num_batches);
+            hipsparselt_init<To>(hC, C_row_r, C_col_r, ldc, stride_c, num_batches);
         else if(arg.initialization == hipsparselt_initialization::trig_float)
-            hipsparselt_init_sin<To>(hC, M, N, ldc, stride_c, num_batches);
+            hipsparselt_init_sin<To>(hC, C_row_r, C_col_r, ldc, stride_c, num_batches);
         else if(arg.initialization == hipsparselt_initialization::hpl)
-            hipsparselt_init_hpl<To>(hC, M, N, ldc, stride_c, num_batches);
+            hipsparselt_init_hpl<To>(hC, C_row_r, C_col_r, ldc, stride_c, num_batches);
         else if(arg.initialization == hipsparselt_initialization::special)
-            hipsparselt_init<To>(hC, M, N, ldc, stride_c, num_batches);
+            hipsparselt_init<To>(hC, C_row_r, C_col_r, ldc, stride_c, num_batches);
     }
 
     // copy data from CPU to device
@@ -708,40 +738,57 @@ void testing_spmm(const Arguments& arg)
             cpu_time_used = get_time_us_no_sync();
         }
 
+        int64_t              tM      = orderA == HIPSPARSE_ORDER_COL ? M : N;
+        int64_t              tN      = orderA == HIPSPARSE_ORDER_COL ? N : M;
+        int64_t              tLda    = orderA == HIPSPARSE_ORDER_COL ? lda : ldb;
+        int64_t              tLdb    = orderA == HIPSPARSE_ORDER_COL ? ldb : lda;
+        hipsparseOperation_t tTransA = orderA == HIPSPARSE_ORDER_COL ? transA : transB;
+        hipsparseOperation_t tTransB = orderA == HIPSPARSE_ORDER_COL ? transB : transA;
+
 #define activation_param \
-    M, N, ldd, hD_gold_act + pos, hD_gold + pos, arg.activation_arg1, arg.activation_arg2
+    tM, tN, ldd, hD_gold_act + pos, hD_gold + pos, arg.activation_arg1, arg.activation_arg2
+#define bias_act_param M, N, ldd, hD_gold_act + pos, hD_gold_act + pos, hBias + bias_stride* i
+#define bias_param M, N, ldd, hD_gold_act + pos, hD_gold + pos, hBias + bias_stride* i
 
         for(int i = 0; i < num_batches; i++)
         {
+            Ti* tA = orderA == HIPSPARSE_ORDER_COL ? hA_ + stride_a * i : hB_ + stride_b * i;
+            Ti* tB = orderA == HIPSPARSE_ORDER_COL ? hB_ + stride_b * i : hA_ + stride_a * i;
+
             if(activation_on || arg.bias_vector)
             {
-                cblas_gemm<Ti, Talpha, Talpha>(transA,
-                                               transB,
-                                               M,
-                                               N,
+                cblas_gemm<Ti, Talpha, Talpha>(tTransA,
+                                               tTransB,
+                                               tM,
+                                               tN,
                                                K,
                                                h_alpha,
-                                               hA_ + stride_a * i,
-                                               lda,
-                                               hB_ + stride_b * i,
-                                               ldb,
+                                               tA,
+                                               tLda,
+                                               tB,
+                                               tLdb,
                                                h_beta,
                                                hD_gold_act + stride_d * i,
                                                ldd,
                                                false);
+
                 auto pos = stride_d * i;
                 if(arg.bias_vector)
                 {
                     if(activation_on)
-                        bias<Talpha, TBias>(M,
-                                            N,
-                                            ldd,
-                                            hD_gold_act + pos,
-                                            hD_gold_act + pos,
-                                            hBias + bias_stride * i);
+                    {
+                        if(orderD == HIPSPARSE_ORDER_COL)
+                            bias<Talpha, TBias, Talpha, HIPSPARSE_ORDER_COL>(bias_act_param);
+                        else
+                            bias<Talpha, TBias, Talpha, HIPSPARSE_ORDER_ROW>(bias_act_param);
+                    }
                     else
-                        bias<Talpha, TBias, To>(
-                            M, N, ldd, hD_gold_act + pos, hD_gold + pos, hBias + bias_stride * i);
+                    {
+                        if(orderD == HIPSPARSE_ORDER_COL)
+                            bias<Talpha, TBias, To, HIPSPARSE_ORDER_COL>(bias_param);
+                        else
+                            bias<Talpha, TBias, To, HIPSPARSE_ORDER_ROW>(bias_param);
+                    }
                 }
 
                 if(activation_on)
@@ -776,16 +823,16 @@ void testing_spmm(const Arguments& arg)
             }
 
             else
-                cblas_gemm<Ti, To, Talpha>(transA,
-                                           transB,
-                                           M,
-                                           N,
+                cblas_gemm<Ti, To, Talpha>(tTransA,
+                                           tTransB,
+                                           tM,
+                                           tN,
                                            K,
                                            h_alpha,
-                                           hA_ + stride_a * i,
-                                           lda,
-                                           hB_ + stride_b * i,
-                                           ldb,
+                                           tA,
+                                           tLda,
+                                           tB,
+                                           tLdb,
                                            h_beta,
                                            hD_gold + stride_d * i,
                                            ldd,
@@ -804,13 +851,13 @@ void testing_spmm(const Arguments& arg)
 
         if(arg.unit_check)
         {
-            unit_check_general<To>(M, N, ldd, stride_d, hD_gold, hD_1, num_batches);
+            unit_check_general<To>(tM, tN, ldd, stride_d, hD_gold, hD_1, num_batches);
         }
 
         if(arg.norm_check)
         {
             hipsparselt_error = std::abs(
-                norm_check_general<To>('F', M, N, ldd, stride_d, hD_gold, hD_1, num_batches));
+                norm_check_general<To>('F', tM, tN, ldd, stride_d, hD_gold, hD_1, num_batches));
         }
 
         // Debug
@@ -818,9 +865,9 @@ void testing_spmm(const Arguments& arg)
         //print_strided_batched("B", &hB[0], B_row, B_col, num_batches, 1, ldb, stride_b);
         //print_strided_batched("C", &hC[0], M, N, num_batches, 1, ldc, stride_c);
         //if(arg.bias_vector)
-        //    print_strided_batched("bias", &hBias[0], M, N, num_batches, 1, M, bias_stride);
-        //print_strided_batched("hD_gold", &hD_gold[0], M, N, num_batches, 1, ldd, stride_d);
-        //print_strided_batched("hD1", &hD_1[0], M, N, num_batches, 1, ldd, stride_d);
+        //    print_strided_batched("bias", &hBias[0], M, 1, num_batches, 1, M, bias_stride);
+        //print_strided_batched("hD_gold", &hD_gold[0], tM, tN, num_batches, 1, ldd, stride_d);
+        //print_strided_batched("hD1", &hD_1[0], tM, tN, num_batches, 1, ldd, stride_d);
     }
 
     if(arg.timing)
@@ -948,19 +995,14 @@ void testing_aux_plan_assign(const Arguments& arg)
     int64_t        stride_c           = ldc * N;
     int64_t        stride_d           = ldd * N;
 
-    hipsparselt_local_mat_descr matA(hipsparselt_matrix_type_structured,
-                                     handle,
-                                     A_row,
-                                     A_col,
-                                     lda,
-                                     arg.a_type,
-                                     HIPSPARSE_ORDER_COL);
+    hipsparselt_local_mat_descr matA(
+        hipsparselt_matrix_type_structured, handle, A_row, A_col, lda, arg.a_type, orderA);
     hipsparselt_local_mat_descr matB(
-        hipsparselt_matrix_type_dense, handle, B_row, B_col, ldb, arg.b_type, HIPSPARSE_ORDER_COL);
+        hipsparselt_matrix_type_dense, handle, B_row, B_col, ldb, arg.b_type, orderB);
     hipsparselt_local_mat_descr matC(
-        hipsparselt_matrix_type_dense, handle, M, N, ldc, arg.c_type, HIPSPARSE_ORDER_COL);
+        hipsparselt_matrix_type_dense, handle, M, N, ldc, arg.c_type, orderC);
     hipsparselt_local_mat_descr matD(
-        hipsparselt_matrix_type_dense, handle, M, N, ldc, arg.d_type, HIPSPARSE_ORDER_COL);
+        hipsparselt_matrix_type_dense, handle, M, N, ldc, arg.d_type, orderD);
 
     hipsparseStatus_t eStatus = expected_hipsparse_status_of_matrix_size(
         arg.a_type, A_row, A_col, lda, orderA, !arg.sparse_b);
