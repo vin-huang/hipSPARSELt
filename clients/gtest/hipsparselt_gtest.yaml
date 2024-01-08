@@ -28,4 +28,10 @@ include: spmm_strided_batched_gtest.yaml
 include: spmm_gtest_1b.yaml
 include: spmm_batched_gtest_1b.yaml
 include: spmm_strided_batched_gtest_1b.yaml
+include: spmm_gtest_row.yaml
+include: spmm_batched_gtest_row.yaml
+include: spmm_strided_batched_gtest_row.yaml
+include: spmm_gtest_1b_row.yaml
+include: spmm_batched_gtest_1b_row.yaml
+include: spmm_strided_batched_gtest_1b_row.yaml
 include: auxiliary_gtest.yaml
