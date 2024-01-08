@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -689,12 +689,16 @@ rocsparselt_status rocsparselt_matmul_descr_init(const rocsparselt_handle*    ha
                 _matA->c_k  = k / 2;
                 _matA->c_ld = (opA == rocsparselt_operation_transpose ? _matA->c_k : m);
                 _matA->c_n  = (opA == rocsparselt_operation_transpose ? m : _matA->c_k);
+                if(_matA->order == rocsparselt_order_row)
+                    std::swap(_matA->c_ld, _matA->c_n);
             }
             else
             {
                 _matB->c_k  = k / 2;
                 _matB->c_ld = (opB == rocsparselt_operation_transpose ? n : _matB->c_k);
                 _matB->c_n  = (opB == rocsparselt_operation_transpose ? _matB->c_k : n);
+                if(_matB->order == rocsparselt_order_row)
+                    std::swap(_matB->c_ld, _matB->c_n);
             }
 
             _matmulDescr->op_A         = opA;

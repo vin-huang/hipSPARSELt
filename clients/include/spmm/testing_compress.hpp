@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,12 +37,44 @@
 #include "utility.hpp"
 #include <hipsparselt/hipsparselt.h>
 
-inline void extract_metadata(unsigned metadata, int& a, int& b, int& c, int& d)
+inline void extract_metadata(unsigned char metadata, int& a, int& b, int& c, int& d)
 {
     a = metadata & 0x03;
     b = (metadata >> 2) & 0x03;
     c = ((metadata >> 4) & 0x03);
     d = ((metadata >> 6) & 0x03);
+}
+
+void print_metadata_strided_batched(const char*    name,
+                                    unsigned char* A,
+                                    int64_t        n1,
+                                    int64_t        n2,
+                                    int64_t        n3,
+                                    int64_t        s1,
+                                    int64_t        s2,
+                                    int64_t        s3)
+{
+    // n1, n2, n3 are matrix dimensions, sometimes called m, n, batch_count
+    // s1, s1, s3 are matrix strides, sometimes called 1, lda, stride_a
+    hipsparselt_cout << "---------- " << name << " ----------\n";
+    int max_size = 128;
+
+    for(int i3 = 0; i3 < n3 && i3 < max_size; i3++)
+    {
+        for(int i1 = 0; i1 < n1 && i1 < max_size; i1++)
+        {
+            for(int i2 = 0; i2 < n2 && i2 < max_size; i2++)
+            {
+                int a, b, c, d;
+                extract_metadata((A[(i1 * s1) + (i2 * s2) + (i3 * s3)]), a, b, c, d);
+                hipsparselt_cout << a << "," << b << "," << c << "," << d << "|";
+            }
+            hipsparselt_cout << "\n";
+        }
+        if(i3 < (n3 - 1) && i3 < (max_size - 1))
+            hipsparselt_cout << "\n";
+    }
+    hipsparselt_cout << std::flush;
 }
 
 template <typename T>
@@ -603,7 +635,7 @@ void testing_compress(const Arguments& arg)
             m_ld       = orderA == HIPSPARSE_ORDER_COL ? m_row : m_col; //M;
             m_stride_1 = m_col; //K / 8;
             m_stride_2 = 1;
-            m_stride_r = M * m_stride_1;
+            m_stride_r = m_row * m_col;
             m_stride   = stride_a == 0 ? 0 : m_stride_r;
         }
         else
@@ -631,7 +663,7 @@ void testing_compress(const Arguments& arg)
             m_ld       = orderB == HIPSPARSE_ORDER_COL ? m_row : m_col; //K / 8;
             m_stride_1 = 1;
             m_stride_2 = m_row;
-            m_stride_r = N * m_stride_2;
+            m_stride_r = m_row * m_col;
             m_stride   = stride_b == 0 ? 0 : m_stride_r;
         }
 
@@ -640,7 +672,7 @@ void testing_compress(const Arguments& arg)
             std::swap(stride_1, stride_2);
             std::swap(c_row, c_col);
             std::swap(c_stride_1, c_stride_2);
-            //std::swap(m_row, m_col);
+            std::swap(m_row, m_col);
             //std::swap(m_stride_1, m_stride_2);
         }
 
@@ -730,8 +762,8 @@ void testing_compress(const Arguments& arg)
                               c_stride_1,
                               c_stride_2,
                               c_stride,
-                              m_row,
-                              m_col,
+                              order == HIPSPARSE_ORDER_COL ? m_row : m_col,
+                              order == HIPSPARSE_ORDER_COL ? m_col : m_row,
                               num_batches,
                               m_stride_1,
                               m_stride_2,
@@ -777,6 +809,12 @@ void testing_compress(const Arguments& arg)
                                           num_batches);
 #endif
         }
+        //print_strided_batched("Pruned", &hT_pruned[0], T_row, T_col, num_batches, 1, ldt, stride_t);
+        //print_strided_batched("Compress Host", reinterpret_cast<Ti*>(hT_gold.data()), c_row, c_col, num_batches, 1, c_ld, c_stride);
+        //print_strided_batched("Compress Device", reinterpret_cast<Ti*>(hT_1.data()), c_row, c_col, num_batches, 1, c_ld, c_stride);
+        //hipsparselt_cout <<  metadata_offset<< "," << m_row<< "," << m_col<< "," << num_batches<< "," << 1<< "," << m_ld<< "," << m_stride << std::endl;
+        //print_metadata_strided_batched("Metadata Host", reinterpret_cast<unsigned char*>(hT_gold.data()+ metadata_offset), m_row, m_col, num_batches, 1, m_ld, m_stride);
+        //print_metadata_strided_batched("Metadata Device", reinterpret_cast<unsigned char*>(hT_1.data())+ metadata_offset, m_row, m_col, num_batches, 1, m_ld, m_stride);
     }
 
     if(arg.timing)
