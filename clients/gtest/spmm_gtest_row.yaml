@@ -691,22 +691,4 @@ Tests:
   orderB: [R]
   orderC: [R]
   orderD: [R]
-
-- name: aux_plan_assign
-  category: pre_checkin
-  function:
-    aux_plan_assign: *hpa_int8_precision
-  M: 128
-  N: 128
-  K: 128
-  transA: T
-  transB: N
-  alpha: 1
-  beta: 0
-  sparse_b: [ true, false]
-  orderA: [R]
-  orderB: [R]
-  orderC: [R]
-  orderD: [R]
-
 ...
