@@ -64,12 +64,8 @@ void bias(int64_t m, int64_t n, int64_t ld, T* src, To* dest, Tb* bias)
 #pragma omp parallel for
         for(int64_t j = 0; j < n; j++)
         {
-            int64_t pos;
-            if constexpr(order == HIPSPARSE_ORDER_COL)
-                pos = j * ld + i;
-            else
-                pos = i * ld + j;
-            TAccum src_Taccum;
+            int64_t pos = j * ld + i;
+            TAccum  src_Taccum;
             if constexpr(std::is_same<T, TAccum>())
                 src_Taccum = *(src + pos);
             else
@@ -295,7 +291,10 @@ void testing_spmm(const Arguments& arg)
     int64_t        stride_d           = do_strided_batched              ? arg.stride_d
                                         : orderD == HIPSPARSE_ORDER_COL ? ldd * N
                                                                         : ldc * M;
-    int64_t bias_stride = do_strided_batched ? arg.bias_stride == -1 ? M : arg.bias_stride : 0;
+    int64_t        bias_stride
+        = do_strided_batched
+              ? arg.bias_stride == -1 ? orderD == HIPSPARSE_ORDER_COL ? M : N : arg.bias_stride
+              : 0;
 
     hipsparseLtDatatype_t bias_type
         = arg.bias_type == 0 ? (arg.a_type == HIPSPARSELT_R_8I ? HIPSPARSELT_R_32F : arg.a_type)
@@ -506,15 +505,18 @@ void testing_spmm(const Arguments& arg)
 
     hipsparselt_seedrand();
 
-    const size_t size_bias
-        = arg.bias_vector ? (bias_stride == 0 ? M : bias_stride * num_batches) : 0;
+    const size_t size_bias = arg.bias_vector
+                                 ? (bias_stride == 0 ? orderD == HIPSPARSE_ORDER_COL ? M : N
+                                                     : bias_stride * num_batches)
+                                 : 0;
 
     device_vector<TBias> dBias(size_bias, 1, HMM);
     CHECK_DEVICE_ALLOCATION(dBias.memcheck());
     host_vector<TBias> hBias(size_bias);
     if(arg.bias_vector)
     {
-        hipsparselt_init<TBias>(hBias, M, 1, M, bias_stride, num_batches);
+        int bsize = orderD == HIPSPARSE_ORDER_COL ? M : N;
+        hipsparselt_init<TBias>(hBias, bsize, 1, bsize, bias_stride, num_batches);
         CHECK_HIP_ERROR(dBias.transfer_from(hBias));
         void* _dBias = dBias;
         EXPECT_HIPSPARSE_STATUS(
@@ -747,8 +749,8 @@ void testing_spmm(const Arguments& arg)
 
 #define activation_param \
     tM, tN, ldd, hD_gold_act + pos, hD_gold + pos, arg.activation_arg1, arg.activation_arg2
-#define bias_act_param M, N, ldd, hD_gold_act + pos, hD_gold_act + pos, hBias + bias_stride* i
-#define bias_param M, N, ldd, hD_gold_act + pos, hD_gold + pos, hBias + bias_stride* i
+#define bias_act_param tM, tN, ldd, hD_gold_act + pos, hD_gold_act + pos, hBias + bias_stride* i
+#define bias_param tM, tN, ldd, hD_gold_act + pos, hD_gold + pos, hBias + bias_stride* i
 
         for(int i = 0; i < num_batches; i++)
         {
@@ -863,9 +865,9 @@ void testing_spmm(const Arguments& arg)
         // Debug
         //print_strided_batched("A", &hA[0], A_row, A_col, num_batches, 1, lda, stride_a);
         //print_strided_batched("B", &hB[0], B_row, B_col, num_batches, 1, ldb, stride_b);
-        //print_strided_batched("C", &hC[0], M, N, num_batches, 1, ldc, stride_c);
+        //print_strided_batched("C", &hC[0], tM, tN, num_batches, 1, ldc, stride_c);
         //if(arg.bias_vector)
-        //    print_strided_batched("bias", &hBias[0], M, 1, num_batches, 1, M, bias_stride);
+        //    print_strided_batched("bias", &hBias[0], tM, 1, num_batches, 1, tM, bias_stride);
         //print_strided_batched("hD_gold", &hD_gold[0], tM, tN, num_batches, 1, ldd, stride_d);
         //print_strided_batched("hD1", &hD_1[0], tM, tN, num_batches, 1, ldd, stride_d);
     }
