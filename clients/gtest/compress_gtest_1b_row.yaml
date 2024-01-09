@@ -34,6 +34,7 @@ Tests:
   matrix_size: *small_matrix_size_range
   transA_transB: *transA_transB_range
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -46,6 +47,7 @@ Tests:
   matrix_size: *medium_matrix_size_range
   transA_transB: *transA_transB_range
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -60,6 +62,7 @@ Tests:
   alpha: 1
   beta: 0
   initialization: special
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -75,6 +78,7 @@ Tests:
   alpha: 1
   beta: 1
   HMM: true
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -88,6 +92,7 @@ Tests:
   transA_transB: *transA_transB_range
   alpha: 2
   beta: 3
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -101,6 +106,7 @@ Tests:
     compress: *real_precisions_1b
   matrix_size: *deepbench_sizes
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -118,6 +124,7 @@ Tests:
   flags: 4
   initialization: special
   transA_transB: *transA_transB_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -132,6 +139,7 @@ Tests:
   matrix_size: *resnet50_fwd_sizes
   alpha: 1
   beta: 0
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -147,6 +155,7 @@ Tests:
   alpha: 1
   beta: 0
   initialization: special
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -161,6 +170,7 @@ Tests:
   matrix_size: *resnet50_bwdwrw_sizes
   alpha: 1
   beta: 1
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -175,6 +185,7 @@ Tests:
   matrix_size: *resnet50_bwddata_sizes
   alpha: 1
   beta: 0
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -189,6 +200,7 @@ Tests:
   matrix_size: *inception4_fwd_sizes
   alpha: 1
   beta: 0
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -203,6 +215,7 @@ Tests:
   matrix_size: *inception4_bwdwrw_sizes
   alpha: 1
   beta: 1
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -217,6 +230,7 @@ Tests:
   matrix_size: *inception4_bwddata_sizes
   alpha: 1
   beta: 0
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -231,6 +245,7 @@ Tests:
   alpha: 1
   beta: 1
   matrix_size: *ctest_bwdwrw_sizes
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -245,6 +260,7 @@ Tests:
   alpha: 1
   beta: 0
   matrix_size: *ctest_fwd_sizes
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -258,6 +274,7 @@ Tests:
   N: 8
   K: 8
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -272,6 +289,7 @@ Tests:
   N: 16
   K: 16
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -286,6 +304,7 @@ Tests:
   N: 24
   K: 24
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -300,6 +319,7 @@ Tests:
   N: 32
   K: 32
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -314,6 +334,7 @@ Tests:
   N: [16, 32, 48, 64, 80, 96, 112, 128]
   K: 48
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -328,6 +349,7 @@ Tests:
   N: 64
   K: [16, 32, 48, 64, 80, 96, 112, 128]
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -342,6 +364,7 @@ Tests:
   N: 16
   K: 16
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -356,6 +379,7 @@ Tests:
   N: 16
   K: 64
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -370,6 +394,7 @@ Tests:
   N: 96
   K: 96
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -384,6 +409,7 @@ Tests:
   N: 128
   K: 128
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -398,6 +424,7 @@ Tests:
   N: 256
   K: 256
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -412,6 +439,7 @@ Tests:
   N: 16
   K: 16
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -426,6 +454,7 @@ Tests:
   N: 256
   K: 16
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -441,6 +470,7 @@ Tests:
   N: 16
   K: 256
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -455,6 +485,7 @@ Tests:
   N: 512
   K: 512
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -469,6 +500,7 @@ Tests:
   N: 1023..1025
   K: 1024
   alpha_beta: *alpha_beta_range
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -487,6 +519,7 @@ Tests:
     - { M: 1024, N: 1024, K: 1024 }
   alpha: [ 0.0, 0.5, 1.0 ]
   beta:  [ 0.0, 0.5, 1.0 ]
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]

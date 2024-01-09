@@ -20,6 +20,7 @@ Tests:
   transA_transB: *transA_transB_range
   alpha_beta: *alpha_beta_range
   batch_count: [ 1, 3 ]
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -37,6 +38,7 @@ Tests:
   alpha_beta: *alpha_beta_range
   transA_transB: *transA_transB_range
   batch_count: [ 1, 3 ]
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -50,6 +52,7 @@ Tests:
   transA_transB: *transA_transB_range
   alpha_beta: *alpha_beta_range
   batch_count: [ 1, 3 ]
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -63,6 +66,7 @@ Tests:
   transA_transB: *transA_transB_range
   alpha_beta: *alpha_beta_range
   batch_count: [  1, 3 ]
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -78,6 +82,7 @@ Tests:
   transA: N
   transB: T
   batch_count: [ 2 ]
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -93,6 +98,7 @@ Tests:
   transA: N
   transB: T
   batch_count: 4
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -108,6 +114,7 @@ Tests:
   transA: N
   transB: T
   batch_count: 4
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
@@ -123,6 +130,7 @@ Tests:
   transA: N
   transB: N
   batch_count: 1
+  sparse_b: [ true, false]
   orderA: [R]
   orderB: [R]
   orderC: [R]
