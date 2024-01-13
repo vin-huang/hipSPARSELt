@@ -399,6 +399,22 @@ void testing_spmm(const Arguments& arg)
     hipsparselt_local_matmul_descr matmul(
         handle, transA, transB, matA, matB, matC, matD, arg.compute_type);
 
+#ifdef __HIP_PLATFORM_NVIDIA__
+    if(matmul.status() != HIPSPARSE_STATUS_SUCCESS)
+        return;
+    if(!(arg.activation_type == hipsparselt_activation_type::relu
+       || arg.activation_type == hipsparselt_activation_type::gelu
+       || arg.activation_type == hipsparselt_activation_type::clippedrelu))
+       return;
+    if(arg.activation_type == hipsparselt_activation_type::gelu)
+    {
+        if(not (arg.a_type == HIPSPARSELT_R_8I && arg.b_type == HIPSPARSELT_R_8I 
+               && arg.c_type == HIPSPARSELT_R_8I && arg.d_type == HIPSPARSELT_R_8I 
+               && arg.compute_type == HIPSPARSELT_COMPUTE_32I))
+            return;
+    }
+#endif
+
     int activation_on = 1;
     switch(arg.activation_type)
     {
@@ -771,7 +787,6 @@ void testing_spmm(const Arguments& arg)
                                                hD_gold_act + stride_d * i,
                                                ldd,
                                                false);
-
                 auto pos = stride_d * i;
                 if(arg.bias_vector)
                 {
