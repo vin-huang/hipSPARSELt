@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -121,7 +121,8 @@ auto _gelu = [](auto in, auto arg1, auto /*arg2*/) -> decltype(in) {
     Tc             in_Tc = static_cast<Tc>(in);
 
     auto out = 0.5f * (in_Tc * (1.f + std::tanh(k0 * (in_Tc * (1.f + k1 * (in_Tc * in_Tc))))));
-    if(arg1 != 1) out *= arg1;
+    if(arg1 != 1)
+        out *= arg1;
 
     return static_cast<decltype(in)>(out);
 };
@@ -262,6 +263,11 @@ void testing_spmm(const Arguments& arg)
     hipStream_t              stream;
     CHECK_HIP_ERROR(hipStreamCreate(&stream));
 
+    hipsparseOrder_t orderA = char_to_hipsparselt_order(arg.orderA);
+    hipsparseOrder_t orderB = char_to_hipsparselt_order(arg.orderB);
+    hipsparseOrder_t orderC = char_to_hipsparselt_order(arg.orderC);
+    hipsparseOrder_t orderD = char_to_hipsparselt_order(arg.orderD);
+
     int64_t A_row = transA == HIPSPARSE_OPERATION_NON_TRANSPOSE ? M : K;
     int64_t A_col = transA == HIPSPARSE_OPERATION_NON_TRANSPOSE ? K : M;
     int64_t B_row = transB == HIPSPARSE_OPERATION_NON_TRANSPOSE ? K : N;
@@ -303,23 +309,24 @@ void testing_spmm(const Arguments& arg)
     hipsparselt_local_mat_descr matD(
         hipsparselt_matrix_type_dense, handle, M, N, ldc, arg.d_type, HIPSPARSE_ORDER_COL);
 
-    hipsparseStatus_t eStatus
-        = expected_hipsparse_status_of_matrix_size(arg.a_type, A_row, A_col, lda, !arg.sparse_b);
+    hipsparseStatus_t eStatus = expected_hipsparse_status_of_matrix_size(
+        arg.a_type, A_row, A_col, lda, orderA, !arg.sparse_b);
     EXPECT_HIPSPARSE_STATUS(matA.status(), eStatus);
     if(eStatus != HIPSPARSE_STATUS_SUCCESS)
         return;
 
-    eStatus = expected_hipsparse_status_of_matrix_size(arg.b_type, B_row, B_col, ldb, arg.sparse_b);
+    eStatus = expected_hipsparse_status_of_matrix_size(
+        arg.b_type, B_row, B_col, ldb, orderB, arg.sparse_b);
     EXPECT_HIPSPARSE_STATUS(matB.status(), eStatus);
     if(eStatus != HIPSPARSE_STATUS_SUCCESS)
         return;
 
-    eStatus = expected_hipsparse_status_of_matrix_size(arg.c_type, M, N, ldc);
+    eStatus = expected_hipsparse_status_of_matrix_size(arg.c_type, M, N, ldc, orderC);
     EXPECT_HIPSPARSE_STATUS(matC.status(), eStatus);
     if(eStatus != HIPSPARSE_STATUS_SUCCESS)
         return;
 
-    eStatus = expected_hipsparse_status_of_matrix_size(arg.d_type, M, N, ldd);
+    eStatus = expected_hipsparse_status_of_matrix_size(arg.d_type, M, N, ldd, orderD);
     EXPECT_HIPSPARSE_STATUS(matD.status(), eStatus);
     if(eStatus != HIPSPARSE_STATUS_SUCCESS)
         return;
@@ -346,28 +353,28 @@ void testing_spmm(const Arguments& arg)
 
     if(do_strided_batched)
     {
-        eStatus = expected_hipsparse_status_of_matrix_stride(stride_a, A_row, A_col, lda);
+        eStatus = expected_hipsparse_status_of_matrix_stride(stride_a, A_row, A_col, lda, orderA);
         EXPECT_HIPSPARSE_STATUS(
             hipsparseLtMatDescSetAttribute(
                 handle, matA, HIPSPARSELT_MAT_BATCH_STRIDE, &stride_a, sizeof(int64_t)),
             eStatus);
         if(eStatus != HIPSPARSE_STATUS_SUCCESS)
             return;
-        eStatus = expected_hipsparse_status_of_matrix_stride(stride_b, B_row, B_col, ldb);
+        eStatus = expected_hipsparse_status_of_matrix_stride(stride_b, B_row, B_col, ldb, orderB);
         EXPECT_HIPSPARSE_STATUS(
             hipsparseLtMatDescSetAttribute(
                 handle, matB, HIPSPARSELT_MAT_BATCH_STRIDE, &stride_b, sizeof(int64_t)),
             eStatus);
         if(eStatus != HIPSPARSE_STATUS_SUCCESS)
             return;
-        eStatus = expected_hipsparse_status_of_matrix_stride(stride_c, M, N, ldc);
+        eStatus = expected_hipsparse_status_of_matrix_stride(stride_c, M, N, ldc, orderC);
         EXPECT_HIPSPARSE_STATUS(
             hipsparseLtMatDescSetAttribute(
                 handle, matC, HIPSPARSELT_MAT_BATCH_STRIDE, &stride_c, sizeof(int64_t)),
             eStatus);
         if(eStatus != HIPSPARSE_STATUS_SUCCESS)
             return;
-        eStatus = expected_hipsparse_status_of_matrix_stride(stride_d, M, N, ldd);
+        eStatus = expected_hipsparse_status_of_matrix_stride(stride_d, M, N, ldd, orderD);
         EXPECT_HIPSPARSE_STATUS(
             hipsparseLtMatDescSetAttribute(
                 handle, matD, HIPSPARSELT_MAT_BATCH_STRIDE, &stride_d, sizeof(int64_t)),
@@ -431,14 +438,14 @@ void testing_spmm(const Arguments& arg)
                                               &activation_on,
                                               sizeof(activation_on)),
             HIPSPARSE_STATUS_SUCCESS);
-            if(arg.activation_arg1 != 1)
-                EXPECT_HIPSPARSE_STATUS(
-                    hipsparseLtMatmulDescSetAttribute(handle,
-                                                    matmul,
-                                                    HIPSPARSELT_MATMUL_ACTIVATION_GELU_SCALING,
-                                                    &arg.activation_arg1,
-                                                    sizeof(float)),
-                    HIPSPARSE_STATUS_SUCCESS);
+        if(arg.activation_arg1 != 1)
+            EXPECT_HIPSPARSE_STATUS(
+                hipsparseLtMatmulDescSetAttribute(handle,
+                                                  matmul,
+                                                  HIPSPARSELT_MATMUL_ACTIVATION_GELU_SCALING,
+                                                  &arg.activation_arg1,
+                                                  sizeof(float)),
+                HIPSPARSE_STATUS_SUCCESS);
         break;
     case hipsparselt_activation_type::abs:
         EXPECT_HIPSPARSE_STATUS(hipsparseLtMatmulDescSetAttribute(handle,
@@ -576,10 +583,11 @@ void testing_spmm(const Arguments& arg)
 
     const size_t size_A = stride_a == 0 ? lda * A_col * num_batches : stride_a * num_batches;
     const size_t size_B = stride_b == 0 ? ldb * B_col * num_batches : stride_b * num_batches;
-    const size_t size_pruned_copy = arg.unit_check || arg.norm_check || arg.timing ? (arg.sparse_b ? size_B : size_A) : 0;
-    const size_t size_C      = stride_c == 0 ? ldc * N * num_batches : stride_c * num_batches;
-    const size_t size_D      = stride_d == 0 ? ldd * N * num_batches : stride_d * num_batches;
-    const size_t size_D_copy = arg.unit_check || arg.norm_check ? size_D : 0;
+    const size_t size_pruned_copy
+        = arg.unit_check || arg.norm_check || arg.timing ? (arg.sparse_b ? size_B : size_A) : 0;
+    const size_t size_C          = stride_c == 0 ? ldc * N * num_batches : stride_c * num_batches;
+    const size_t size_D          = stride_d == 0 ? ldd * N * num_batches : stride_d * num_batches;
+    const size_t size_D_copy     = arg.unit_check || arg.norm_check ? size_D : 0;
     const size_t size_D_act_copy = activation_on ? size_D_copy : 0;
 
     // allocate memory on device
@@ -672,10 +680,10 @@ void testing_spmm(const Arguments& arg)
     }
 
     void *dP, *dA_, *dB_;
-    Ti *hA_, *hB_;
+    Ti *  hA_, *hB_;
     if(!arg.sparse_b)
     {
-        dP = dA;
+        dP  = dA;
         dA_ = d_compressed;
         dB_ = dB;
         hA_ = h_pruned;
@@ -683,7 +691,7 @@ void testing_spmm(const Arguments& arg)
     }
     else
     {
-        dP = dB;
+        dP  = dB;
         dA_ = dA;
         dB_ = d_compressed;
         hA_ = hA;
@@ -706,7 +714,7 @@ void testing_spmm(const Arguments& arg)
     if(arg.unit_check || arg.norm_check)
     {
         CHECK_HIP_ERROR(hipStreamSynchronize(stream));
-        CHECK_HIP_ERROR(h_pruned.transfer_from(arg.sparse_b? dB : dA));
+        CHECK_HIP_ERROR(h_pruned.transfer_from(arg.sparse_b ? dB : dA));
         EXPECT_HIPSPARSE_STATUS(
             hipsparseLtMatmul(
                 handle, plan, &h_alpha, dA_, dB_, &h_beta, dC, dD, dWorkspace, &stream, 1),
@@ -838,36 +846,20 @@ void testing_spmm(const Arguments& arg)
         int number_hot_calls  = arg.iters;
         for(int i = 0; i < number_cold_calls; i++)
         {
-            EXPECT_HIPSPARSE_STATUS(hipsparseLtMatmul(handle,
-                                                      plan,
-                                                      &h_alpha,
-                                                      dA_,
-                                                      dB_,
-                                                      &h_beta,
-                                                      dC,
-                                                      dD,
-                                                      dWorkspace,
-                                                      &stream,
-                                                      1),
-                                    HIPSPARSE_STATUS_SUCCESS);
+            EXPECT_HIPSPARSE_STATUS(
+                hipsparseLtMatmul(
+                    handle, plan, &h_alpha, dA_, dB_, &h_beta, dC, dD, dWorkspace, &stream, 1),
+                HIPSPARSE_STATUS_SUCCESS);
         }
 
         CHECK_HIP_ERROR(hipStreamSynchronize(stream));
         gpu_time_used = get_time_us_sync(stream); // in microseconds
         for(int i = 0; i < number_hot_calls; i++)
         {
-            EXPECT_HIPSPARSE_STATUS(hipsparseLtMatmul(handle,
-                                                      plan,
-                                                      &h_alpha,
-                                                      dA_,
-                                                      dB_,
-                                                      &h_beta,
-                                                      dC,
-                                                      dD,
-                                                      dWorkspace,
-                                                      &stream,
-                                                      1),
-                                    HIPSPARSE_STATUS_SUCCESS);
+            EXPECT_HIPSPARSE_STATUS(
+                hipsparseLtMatmul(
+                    handle, plan, &h_alpha, dA_, dB_, &h_beta, dC, dD, dWorkspace, &stream, 1),
+                HIPSPARSE_STATUS_SUCCESS);
         }
         CHECK_HIP_ERROR(hipStreamSynchronize(stream));
         gpu_time_used = get_time_us_sync(stream) - gpu_time_used;
@@ -881,7 +873,7 @@ void testing_spmm(const Arguments& arg)
             flops += clippedrelu_gflop_count<float>(M, N);
             break;
         case hipsparselt_activation_type::gelu:
-            flops += gelu_gflop_count<float>(M, N, arg.activation_arg1!=1);
+            flops += gelu_gflop_count<float>(M, N, arg.activation_arg1 != 1);
             break;
         case hipsparselt_activation_type::abs:
             flops += abs_gflop_count<float>(M, N);
@@ -952,6 +944,11 @@ void testing_aux_plan_assign(const Arguments& arg)
     hipStream_t              stream;
     CHECK_HIP_ERROR(hipStreamCreate(&stream));
 
+    hipsparseOrder_t orderA = char_to_hipsparselt_order(arg.orderA);
+    hipsparseOrder_t orderB = char_to_hipsparselt_order(arg.orderB);
+    hipsparseOrder_t orderC = char_to_hipsparselt_order(arg.orderC);
+    hipsparseOrder_t orderD = char_to_hipsparselt_order(arg.orderD);
+
     int64_t A_row = transA == HIPSPARSE_OPERATION_NON_TRANSPOSE ? M : K;
     int64_t A_col = transA == HIPSPARSE_OPERATION_NON_TRANSPOSE ? K : M;
     int64_t B_row = transB == HIPSPARSE_OPERATION_NON_TRANSPOSE ? K : N;
@@ -982,23 +979,24 @@ void testing_aux_plan_assign(const Arguments& arg)
     hipsparselt_local_mat_descr matD(
         hipsparselt_matrix_type_dense, handle, M, N, ldc, arg.d_type, HIPSPARSE_ORDER_COL);
 
-    hipsparseStatus_t eStatus
-        = expected_hipsparse_status_of_matrix_size(arg.a_type, A_row, A_col, lda, !arg.sparse_b);
+    hipsparseStatus_t eStatus = expected_hipsparse_status_of_matrix_size(
+        arg.a_type, A_row, A_col, lda, orderA, !arg.sparse_b);
     EXPECT_HIPSPARSE_STATUS(matA.status(), eStatus);
     if(eStatus != HIPSPARSE_STATUS_SUCCESS)
         return;
 
-    eStatus = expected_hipsparse_status_of_matrix_size(arg.b_type, B_row, B_col, ldb, arg.sparse_b);
+    eStatus = expected_hipsparse_status_of_matrix_size(
+        arg.b_type, B_row, B_col, ldb, orderB, arg.sparse_b);
     EXPECT_HIPSPARSE_STATUS(matB.status(), eStatus);
     if(eStatus != HIPSPARSE_STATUS_SUCCESS)
         return;
 
-    eStatus = expected_hipsparse_status_of_matrix_size(arg.c_type, M, N, ldc);
+    eStatus = expected_hipsparse_status_of_matrix_size(arg.c_type, M, N, ldc, orderC);
     EXPECT_HIPSPARSE_STATUS(matC.status(), eStatus);
     if(eStatus != HIPSPARSE_STATUS_SUCCESS)
         return;
 
-    eStatus = expected_hipsparse_status_of_matrix_size(arg.d_type, M, N, ldd);
+    eStatus = expected_hipsparse_status_of_matrix_size(arg.d_type, M, N, ldd, orderD);
     EXPECT_HIPSPARSE_STATUS(matD.status(), eStatus);
     if(eStatus != HIPSPARSE_STATUS_SUCCESS)
         return;
