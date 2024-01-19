@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -215,13 +215,6 @@ inline rocsparselt_status validateMatrixArgs(const _rocsparselt_handle* handle,
                          << ld << ")" << std::endl;
         log_error(handle, __func__, "row and col must >= ld");
         return rocsparselt_status_invalid_size;
-    }
-
-    if(order == rocsparselt_order_row)
-    {
-        hipsparselt_cerr << "rocsparselt_order_row is not supported" << std::endl;
-        log_error(handle, __func__, "rocsparselt_order_row is not supported");
-        return rocsparselt_status_not_implemented;
     }
 
     //TODO should support other datatype in the future.
