@@ -1,5 +1,5 @@
 # ########################################################################
-# Copyright (c) 2022-2023 Advanced Micro Devices, Inc.
+# Copyright (c) 2022-2024 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -124,6 +124,8 @@ add_custom_command( OUTPUT "${HIPSPARSELT_TEST_DATA}"
                             prune_gtest_1b_row.yaml prune_batched_gtest_1b_row.yaml prune_strided_batched_gtest_1b_row.yaml
                             compress_gtest.yaml compress_batched_gtest.yaml compress_strided_batched_gtest.yaml
                             compress_gtest_1b.yaml compress_batched_gtest_1b.yaml compress_strided_batched_gtest_1b.yaml
+                            compress_gtest_row.yaml compress_batched_gtest_row.yaml compress_strided_batched_gtest_row.yaml
+                            compress_gtest_1b_row.yaml compress_batched_gtest_1b_row.yaml compress_strided_batched_gtest_1b_row.yaml
                             spmm_gtest.yaml spmm_batched_gtest.yaml spmm_strided_batched_gtest.yaml
                             spmm_gtest_1b.yaml spmm_batched_gtest_1b.yaml spmm_strided_batched_gtest_1b.yaml
                             auxiliary_gtest.yaml
