@@ -406,14 +406,22 @@ rocsparselt_status rocsparselt_mat_descr_set_attribute(const rocsparselt_handle*
                 auto batch_stride = reinterpret_cast<const int64_t*>(data);
                 if(*batch_stride != 0)
                 {
-                    int64_t expected_batch_stride = _matDescr->n * _matDescr->ld;
+                    int64_t expected_batch_stride
+                        = (_matDescr->order == rocsparselt_order_column ? _matDescr->n
+                                                                        : _matDescr->m)
+                          * _matDescr->ld;
                     if(*batch_stride < expected_batch_stride)
                     {
-                        hipsparselt_cerr << "The batch stride must be 0 or at least cols * ld ("
-                                         << expected_batch_stride << "), current: " << *batch_stride
-                                         << std::endl;
-                        log_error(
-                            _handle, __func__, "The batch stride must be 0 or at least cols * ld");
+                        std::ostringstream stringStream;
+                        stringStream << "The batch stride must be 0 or at least ";
+                        stringStream
+                            << (_matDescr->order == rocsparselt_order_column ? "col" : "row");
+                        stringStream << " * ld (" << expected_batch_stride
+                                     << "), current: " << *batch_stride;
+
+                        auto msg = stringStream.str();
+                        hipsparselt_cerr << msg << std::endl;
+                        log_error(_handle, __func__, msg);
                         return rocsparselt_status_invalid_value;
                     }
                 }

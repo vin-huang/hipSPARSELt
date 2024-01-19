@@ -209,11 +209,12 @@ inline rocsparselt_status validateMatrixArgs(const _rocsparselt_handle* handle,
     }
 
     // leading dimensions must be valid
-    if(num_rows > ld)
+    int64_t min_ld = order == rocsparselt_order_column ? num_rows : num_cols;
+    if(min_ld > ld)
     {
-        hipsparselt_cerr << "number of rows(" << num_rows << ") is larger than leading dimension("
-                         << ld << ")" << std::endl;
-        log_error(handle, __func__, "row and col must >= ld");
+        hipsparselt_cerr << "leading dimension(" << ld << ") is smaller than " << min_ld
+                         << std::endl;
+        log_error(handle, __func__, "ld is invalid");
         return rocsparselt_status_invalid_size;
     }
 
