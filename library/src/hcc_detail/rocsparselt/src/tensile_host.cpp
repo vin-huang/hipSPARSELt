@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -310,7 +310,7 @@ namespace
 
         // Add problem predicates for CEqualsD
         tensileProblem.setCEqualsD(prob.C == prob.D);
-  
+
         tensileProblem.setSparse(prob.sparseA ? 1 : 2);
 
         // set Actvation
@@ -353,9 +353,14 @@ namespace
         if(prob.bias_vector != nullptr || useBias)
         {
             tensileProblem.setUseBias(true);
+            tensileProblem.setBiasDim(true);
             tensileProblem.setBias(rocsparselt_datatype_to_tensile_type(prob.bias_type),
-                                   d.sizes()[0],
-                                   prob.bias_stride);
+                                   prob.order_d == rocsparselt_order_row ? d.sizes()[1]
+                                                                         : d.sizes()[0],
+                                   prob.bias_stride,
+                                   false,
+                                   Tensile::ContractionProblemGemm::TENSOR::D,
+                                   prob.order_d == rocsparselt_order_row);
         }
 
         return tensileProblem;
