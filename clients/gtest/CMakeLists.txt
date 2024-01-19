@@ -116,8 +116,12 @@ add_custom_command( OUTPUT "${HIPSPARSELT_TEST_DATA}"
                     DEPENDS ../common/hipsparselt_gentest.py ../include/hipsparselt_common.yaml
                             spmm_common.yaml spmm_batched_common.yaml spmm_strided_batched_common.yaml
                             spmm_common_16.yaml spmm_batched_common_16.yaml spmm_strided_batched_common_16.yaml
+                            spmm_common_row.yaml spmm_batched_common_row.yaml spmm_strided_batched_common_row.yaml
+                            spmm_common_16_row.yaml spmm_batched_common_16_row.yaml spmm_strided_batched_common_16_row.yaml
                             prune_gtest.yaml prune_batched_gtest.yaml prune_strided_batched_gtest.yaml
                             prune_gtest_1b.yaml prune_batched_gtest_1b.yaml prune_strided_batched_gtest_1b.yaml
+                            prune_gtest_row.yaml prune_batched_gtest_row.yaml prune_strided_batched_gtest_row.yaml
+                            prune_gtest_1b_row.yaml prune_batched_gtest_1b_row.yaml prune_strided_batched_gtest_1b_row.yaml
                             compress_gtest.yaml compress_batched_gtest.yaml compress_strided_batched_gtest.yaml
                             compress_gtest_1b.yaml compress_batched_gtest_1b.yaml compress_strided_batched_gtest_1b.yaml
                             spmm_gtest.yaml spmm_batched_gtest.yaml spmm_strided_batched_gtest.yaml
