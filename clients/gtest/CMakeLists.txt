@@ -128,6 +128,8 @@ add_custom_command( OUTPUT "${HIPSPARSELT_TEST_DATA}"
                             compress_gtest_1b_row.yaml compress_batched_gtest_1b_row.yaml compress_strided_batched_gtest_1b_row.yaml
                             spmm_gtest.yaml spmm_batched_gtest.yaml spmm_strided_batched_gtest.yaml
                             spmm_gtest_1b.yaml spmm_batched_gtest_1b.yaml spmm_strided_batched_gtest_1b.yaml
+                            spmm_gtest_row.yaml spmm_batched_gtest_row.yaml spmm_strided_batched_gtest_row.yaml
+                            spmm_gtest_1b_row.yaml spmm_batched_gtest_1b_row.yaml spmm_strided_batched_gtest_1b_row.yaml
                             auxiliary_gtest.yaml
                     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 add_custom_target( hipsparselt-test-data

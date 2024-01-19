@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -140,6 +140,9 @@ namespace
                 name << '_' << arg.M << '_' << arg.N << '_' << arg.K << '_' << arg.alpha << '_'
                      << arg.lda << '_' << arg.ldb << '_' << arg.beta << '_' << arg.ldc << '_'
                      << arg.ldd;
+
+                name << '_' << (char)std::toupper(arg.orderA) << (char)std::toupper(arg.orderB)
+                     << (char)std::toupper(arg.orderC) << (char)std::toupper(arg.orderD);
 
                 if(strstr(arg.function, "_batched") != nullptr)
                     name << '_' << arg.batch_count;
