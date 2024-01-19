@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -171,7 +171,7 @@ rocsparselt_status rocsparselt_dense_descr_init(const rocsparselt_handle* handle
             _matDescr->type         = valueType;
             _matDescr->order        = order;
             _matDescr->num_batches  = 1;
-            _matDescr->batch_stride = cols * ld;
+            _matDescr->batch_stride = order == rocsparselt_order_column ? cols * ld : rows * ld;
             log_api(_handle,
                     __func__,
                     "_matDescr[out]",
@@ -262,7 +262,7 @@ rocsparselt_status rocsparselt_structured_descr_init(const rocsparselt_handle* h
             _matDescr->order        = order;
             _matDescr->sparsity     = sparsity;
             _matDescr->num_batches  = 1;
-            _matDescr->batch_stride = cols * ld;
+            _matDescr->batch_stride = order == rocsparselt_order_column ? cols * ld : rows * ld;
             log_api(_handle,
                     __func__,
                     "_matDescr[out]",
@@ -678,21 +678,21 @@ rocsparselt_status rocsparselt_matmul_descr_init(const rocsparselt_handle*    ha
             getOriginalSizes(opA, opB, _matA->m, _matA->n, _matB->m, _matB->n, m, n, k);
             if(isSparseA)
             {
-                _matA->c_k             = k / 2;
-                _matA->c_ld            = (opA == rocsparselt_operation_transpose ? _matA->c_k : m);
-                _matA->c_n             = (opA == rocsparselt_operation_transpose ? m : _matA->c_k);
+                _matA->c_k  = k / 2;
+                _matA->c_ld = (opA == rocsparselt_operation_transpose ? _matA->c_k : m);
+                _matA->c_n  = (opA == rocsparselt_operation_transpose ? m : _matA->c_k);
             }
             else
             {
-                _matB->c_k             = k / 2;
-                _matB->c_ld            = (opB == rocsparselt_operation_transpose ? n : _matB->c_k);
-                _matB->c_n             = (opB == rocsparselt_operation_transpose ? _matB->c_k : n);
+                _matB->c_k  = k / 2;
+                _matB->c_ld = (opB == rocsparselt_operation_transpose ? n : _matB->c_k);
+                _matB->c_n  = (opB == rocsparselt_operation_transpose ? _matB->c_k : n);
             }
 
-            _matmulDescr->op_A     = opA;
-            _matmulDescr->op_B     = opB;
-            _matmulDescr->matrix_A = _matA;
-            _matmulDescr->matrix_B = _matB;
+            _matmulDescr->op_A         = opA;
+            _matmulDescr->op_B         = opB;
+            _matmulDescr->matrix_A     = _matA;
+            _matmulDescr->matrix_B     = _matB;
             _matmulDescr->matrix_C     = _matC;
             _matmulDescr->matrix_D     = _matD;
             _matmulDescr->compute_type = computeType;
