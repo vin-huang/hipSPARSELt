@@ -598,7 +598,7 @@ void testing_spmm(const Arguments& arg)
                               ? (orderA == HIPSPARSE_ORDER_COL ? lda * A_col : lda * A_row)
                               : stride_a * num_batches;
     const size_t size_B = stride_b == 0
-                              ? (orderA == HIPSPARSE_ORDER_COL ? ldb * B_col : ldb * B_row)
+                              ? (orderB == HIPSPARSE_ORDER_COL ? ldb * B_col : ldb * B_row)
                               : stride_b * num_batches;
     const size_t size_pruned_copy
         = arg.unit_check || arg.norm_check || arg.timing ? (arg.sparse_b ? size_B : size_A) : 0;
@@ -755,12 +755,23 @@ void testing_spmm(const Arguments& arg)
             cpu_time_used = get_time_us_no_sync();
         }
 
-        int64_t              tM      = orderA == HIPSPARSE_ORDER_COL ? M : N;
-        int64_t              tN      = orderA == HIPSPARSE_ORDER_COL ? N : M;
-        int64_t              tLda    = orderA == HIPSPARSE_ORDER_COL ? lda : ldb;
-        int64_t              tLdb    = orderA == HIPSPARSE_ORDER_COL ? ldb : lda;
-        hipsparseOperation_t tTransA = orderA == HIPSPARSE_ORDER_COL ? transA : transB;
-        hipsparseOperation_t tTransB = orderA == HIPSPARSE_ORDER_COL ? transB : transA;
+        int64_t              tM, tN, tLda, tLdb, tStrideA, tStrideB, tSizeA, tSizeB, tSizeD;
+        hipsparseOperation_t tTransA, tTransB;
+        Ti *tA, *tB;
+
+        tM = M;
+        tN = N;
+        tLda = lda;
+        tLdb = ldb;
+        tTransA = transA;
+        tTransB = transB;
+        tSizeA = orderA == HIPSPARSE_ORDER_COL ? lda * A_col : lda * A_row;
+        tSizeB = orderB == HIPSPARSE_ORDER_COL ? ldb * B_col : ldb * B_row;
+        tSizeD = orderD == HIPSPARSE_ORDER_COL ? ldd * N : ldd * M;
+        tStrideA = stride_a;
+        tStrideB = stride_b;
+        tA = hA_;
+        tB = hB_;
 
 #define activation_param \
     tM, tN, ldd, hD_gold_act + pos, hD_gold + pos, arg.activation_arg1, arg.activation_arg2
@@ -769,24 +780,26 @@ void testing_spmm(const Arguments& arg)
 
         for(int i = 0; i < num_batches; i++)
         {
-            Ti* tA = orderA == HIPSPARSE_ORDER_COL ? hA_ + stride_a * i : hB_ + stride_b * i;
-            Ti* tB = orderA == HIPSPARSE_ORDER_COL ? hB_ + stride_b * i : hA_ + stride_a * i;
 
             if(activation_on || arg.bias_vector)
             {
-                cblas_gemm<Ti, Talpha, Talpha>(tTransA,
+                cblas_gemm<Ti, Talpha, Talpha>(orderC,
+                                               tTransA,
                                                tTransB,
                                                tM,
                                                tN,
                                                K,
                                                h_alpha,
-                                               tA,
+                                               tA + tStrideA * i,
                                                tLda,
-                                               tB,
+                                               tSizeA,
+                                               tB + tStrideB * i,
                                                tLdb,
+                                               tSizeB,
                                                h_beta,
                                                hD_gold_act + stride_d * i,
                                                ldd,
+                                               tSizeD,
                                                false);
 
                 auto pos = stride_d * i;
@@ -840,19 +853,23 @@ void testing_spmm(const Arguments& arg)
             }
 
             else
-                cblas_gemm<Ti, To, Talpha>(tTransA,
+                cblas_gemm<Ti, To, Talpha>(orderC,
+                                           tTransA,
                                            tTransB,
                                            tM,
                                            tN,
                                            K,
                                            h_alpha,
-                                           tA,
+                                           tA + tStrideA * i,
                                            tLda,
-                                           tB,
+                                           tSizeA,
+                                           tB + tStrideB * i,
                                            tLdb,
+                                           tSizeB,
                                            h_beta,
                                            hD_gold + stride_d * i,
                                            ldd,
+                                           tSizeD,
                                            false);
         }
 #undef activation_param
@@ -866,6 +883,11 @@ void testing_spmm(const Arguments& arg)
         CHECK_HIP_ERROR(hipStreamSynchronize(stream));
         CHECK_HIP_ERROR(hD_1.transfer_from(dD));
 
+        //swap M,N due to unit/norm_check_geeral read memory by column order.
+        if(orderD == HIPSPARSE_ORDER_ROW)
+        {
+            std::swap(tM, tN);
+        }
         if(arg.unit_check)
         {
             unit_check_general<To>(tM, tN, ldd, stride_d, hD_gold, hD_1, num_batches);
@@ -878,9 +900,9 @@ void testing_spmm(const Arguments& arg)
         }
 
         // Debug
-        //print_strided_batched("A", &hA[0], A_row, A_col, num_batches, 1, lda, stride_a);
-        //print_strided_batched("B", &hB[0], B_row, B_col, num_batches, 1, ldb, stride_b);
-        //print_strided_batched("C", &hC[0], M, N, num_batches, 1, ldc, stride_c);
+        //print_strided_batched("A", &hA[0], A_row_r, A_col_r, num_batches, 1, lda, stride_a);
+        //print_strided_batched("B", &hB[0], B_row_r, B_col_r, num_batches, 1, ldb, stride_b);
+        //print_strided_batched("C", &hC[0], C_row_r, C_col_r, num_batches, 1, ldc, stride_c);
         //if(arg.bias_vector)
         //    print_strided_batched("bias", &hBias[0], M, 1, num_batches, 1, M, bias_stride);
         //print_strided_batched("hD_gold", &hD_gold[0], tM, tN, num_batches, 1, ldd, stride_d);
@@ -1271,7 +1293,8 @@ void testing_aux_plan_assign(const Arguments& arg)
                   {
                       if(activation_on)
                       {
-                          cblas_gemm<Ti, Talpha, Talpha>(transA,
+                          cblas_gemm<Ti, Talpha, Talpha>(orderC,
+                                                         transA,
                                                          transB,
                                                          M,
                                                          N,
@@ -1279,11 +1302,14 @@ void testing_aux_plan_assign(const Arguments& arg)
                                                          h_alpha,
                                                          hA_pruned + stride_a * i,
                                                          lda,
+                                                         lda * A_col,
                                                          hB + stride_b * i,
                                                          ldb,
+                                                         ldb * B_col,
                                                          h_beta,
                                                          hD_gold_act + stride_d * i,
                                                          ldd,
+                                                         ldd * N,
                                                          false);
 
                           auto pos = stride_d * i;
@@ -1291,7 +1317,8 @@ void testing_aux_plan_assign(const Arguments& arg)
                       }
 
                       else
-                          cblas_gemm<Ti, To, Talpha>(transA,
+                          cblas_gemm<Ti, To, Talpha>(orderC,
+                                                     transA,
                                                      transB,
                                                      M,
                                                      N,
@@ -1299,11 +1326,14 @@ void testing_aux_plan_assign(const Arguments& arg)
                                                      h_alpha,
                                                      hA_pruned + stride_a * i,
                                                      lda,
+                                                     lda * A_col,
                                                      hB + stride_b * i,
                                                      ldb,
+                                                     ldb * B_col,
                                                      h_beta,
                                                      hD_gold + stride_d * i,
                                                      ldd,
+                                                     ldd * N,
                                                      false);
                   }
 #undef activation_param
