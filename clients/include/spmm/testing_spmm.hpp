@@ -773,6 +773,14 @@ void testing_spmm(const Arguments& arg)
         tA = hA_;
         tB = hB_;
 
+        if(!(orderA == orderB && orderA == orderC))
+        {
+            if(orderA != orderC)
+                tTransA = (transA == HIPSPARSE_OPERATION_NON_TRANSPOSE) ? HIPSPARSE_OPERATION_TRANSPOSE : HIPSPARSE_OPERATION_NON_TRANSPOSE;
+            if(orderB != orderC)
+                tTransB = (transB == HIPSPARSE_OPERATION_NON_TRANSPOSE) ? HIPSPARSE_OPERATION_TRANSPOSE : HIPSPARSE_OPERATION_NON_TRANSPOSE;
+        }
+
 #define activation_param \
     tM, tN, ldd, hD_gold_act + pos, hD_gold + pos, arg.activation_arg1, arg.activation_arg2
 #define bias_act_param M, N, ldd, hD_gold_act + pos, hD_gold_act + pos, hBias + bias_stride* i
