@@ -410,14 +410,38 @@ rocsparselt_status ConstructRocSparseLtProblem(const char*                      
     float*  bias_vector = matmul_descr->bias_pointer;
     int64_t bias_stride = matmul_descr->bias_stride;
 
-    rocsparselt_order     order = matmul_descr->matrix_A->order;
+    rocsparselt_order     orderA = matmul_descr->matrix_A->order;
+    rocsparselt_order     orderB = matmul_descr->matrix_B->order;
+    rocsparselt_order     orderC = matmul_descr->matrix_C->order;
+    rocsparselt_order     orderD = matmul_descr->matrix_D->order;
     rocsparselt_operation _opA, _opB;
     int64_t               _m, _n, _k;
     int64_t               _lda, _batch_stride_a, _offset_a;
     int64_t               _ldb, _batch_stride_b, _offset_b;
     const Ti *            _a, *_b;
     bool                  _is_sparse_a;
-    if(order == rocsparselt_order_column)
+
+    if(!(orderA == orderB && orderA == orderC))
+    {
+        if(orderC == rocsparselt_order_column)
+        {
+            if(orderA == rocsparselt_order_row)
+                opA = opA == rocsparselt_operation_none ? rocsparselt_operation_transpose : rocsparselt_operation_none;
+
+            if(orderB == rocsparselt_order_row)
+                opB = opB == rocsparselt_operation_none ? rocsparselt_operation_transpose : rocsparselt_operation_none;
+        }
+        else
+        {
+            if(orderA == rocsparselt_order_column)
+                opA = opA == rocsparselt_operation_none ? rocsparselt_operation_transpose : rocsparselt_operation_none;
+
+            if(orderB == rocsparselt_order_column)
+                opB = opB == rocsparselt_operation_none ? rocsparselt_operation_transpose : rocsparselt_operation_none;
+        }
+    }
+
+    if(orderC == rocsparselt_order_column)
     {
         _opA            = opA;
         _opB            = opB;
@@ -455,10 +479,10 @@ rocsparselt_status ConstructRocSparseLtProblem(const char*                      
     (*prob) = new RocsparseltContractionProblem<Ti, To, Tc>(matmul_descr->handle,
                                                             _opA,
                                                             _opB,
-                                                            order,
-                                                            order,
-                                                            order,
-                                                            order,
+                                                            orderA,
+                                                            orderB,
+                                                            orderC,
+                                                            orderD,
                                                             _m,
                                                             _n,
                                                             _k,
