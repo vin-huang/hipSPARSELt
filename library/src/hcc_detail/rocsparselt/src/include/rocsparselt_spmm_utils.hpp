@@ -260,7 +260,9 @@ inline rocsparselt_status validateMatmulDescrArgs(const _rocsparselt_handle* han
                                                   rocsparselt_matrix_type    matrix_type_a,
                                                   rocsparselt_matrix_type    matrix_type_b,
                                                   rocsparselt_matrix_type    matrix_type_c,
-                                                  rocsparselt_matrix_type    matrix_type_d)
+                                                  rocsparselt_matrix_type    matrix_type_d,
+                                                  rocsparselt_order          order_c,
+                                                  rocsparselt_order          order_d)
 {
     // handle must be valid
     if(handle == nullptr || !handle->isInit())
@@ -350,6 +352,12 @@ inline rocsparselt_status validateMatmulDescrArgs(const _rocsparselt_handle* han
        || matrix_type_d != rocsparselt_matrix_type_dense)
     {
         log_error(handle, __func__, "Matrix C and D must be dense matrix");
+        return rocsparselt_status_invalid_value;
+    }
+
+    if(order_c != order_d)
+    {
+        log_error(handle, __func__, "Matrix C and D must in the same memory order");
         return rocsparselt_status_invalid_value;
     }
 
