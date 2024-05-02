@@ -166,8 +166,8 @@ Tests:
   alpha: 1
   beta: 0
   sparse_b: [ true, false]
-  orderA: [R]
-  orderB: [R]
+  orderA: [C, R]
+  orderB: [C, R]
   orderC: [R]
   orderD: [R]
 
@@ -182,8 +182,8 @@ Tests:
   beta: 0
   initialization: special
   sparse_b: [ true, false]
-  orderA: [R]
-  orderB: [R]
+  orderA: [C, R]
+  orderB: [C, R]
   orderC: [R]
   orderD: [R]
 

@@ -137,6 +137,8 @@ Tests:
   alpha: 1
   beta: 0
   sparse_b: [true, false]
+  orderA: [C, R]
+  orderB: [C, R]
 
 - name: resnet50_fwd_alt
   category: nightly

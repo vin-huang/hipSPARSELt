@@ -198,8 +198,8 @@ Tests:
   transB: N
   batch_count: 4
   sparse_b: [ true, false]
-  orderA: [R]
-  orderB: [R]
+  orderA: [C, R]
+  orderB: [C, R]
   orderC: [R]
   orderD: [R]
 
