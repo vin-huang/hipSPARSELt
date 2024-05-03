@@ -421,25 +421,13 @@ rocsparselt_status ConstructRocSparseLtProblem(const char*                      
     const Ti *            _a, *_b;
     bool                  _is_sparse_a;
 
-    if(!(orderA == orderB && orderA == orderC))
-    {
-        if(orderC == rocsparselt_order_column)
-        {
-            if(orderA == rocsparselt_order_row)
-                opA = opA == rocsparselt_operation_none ? rocsparselt_operation_transpose : rocsparselt_operation_none;
+    if(orderA != orderC)
+        opA = opA == rocsparselt_operation_none ? rocsparselt_operation_transpose
+                                                : rocsparselt_operation_none;
 
-            if(orderB == rocsparselt_order_row)
-                opB = opB == rocsparselt_operation_none ? rocsparselt_operation_transpose : rocsparselt_operation_none;
-        }
-        else
-        {
-            if(orderA == rocsparselt_order_column)
-                opA = opA == rocsparselt_operation_none ? rocsparselt_operation_transpose : rocsparselt_operation_none;
-
-            if(orderB == rocsparselt_order_column)
-                opB = opB == rocsparselt_operation_none ? rocsparselt_operation_transpose : rocsparselt_operation_none;
-        }
-    }
+    if(orderB != orderC)
+        opB = opB == rocsparselt_operation_none ? rocsparselt_operation_transpose
+                                                : rocsparselt_operation_none;
 
     if(orderC == rocsparselt_order_column)
     {
@@ -479,9 +467,6 @@ rocsparselt_status ConstructRocSparseLtProblem(const char*                      
     (*prob) = new RocsparseltContractionProblem<Ti, To, Tc>(matmul_descr->handle,
                                                             _opA,
                                                             _opB,
-                                                            orderA,
-                                                            orderB,
-                                                            orderC,
                                                             orderD,
                                                             _m,
                                                             _n,

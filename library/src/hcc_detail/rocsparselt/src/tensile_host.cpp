@@ -352,15 +352,15 @@ namespace
         // set bias mode
         if(prob.bias_vector != nullptr || useBias > 0)
         {
-            int guessedUseBias = (prob.order_d == rocsparselt_order_row) ? 2 : 1;
+            int guessedUseBias = (prob.order == rocsparselt_order_row) ? 2 : 1;
             tensileProblem.setUseBias(useBias > 0 ? useBias : guessedUseBias);
             tensileProblem.setBias(rocsparselt_datatype_to_tensile_type(prob.bias_type),
-                                   prob.order_d == rocsparselt_order_row ? d.sizes()[1]
+                                   prob.order == rocsparselt_order_row ? d.sizes()[1]
                                                                          : d.sizes()[0],
                                    prob.bias_stride,
                                    false,
                                    Tensile::ContractionProblemGemm::TENSOR::D,
-                                   prob.order_d == rocsparselt_order_row);
+                                   prob.order == rocsparselt_order_row);
         }
 
         return tensileProblem;

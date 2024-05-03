@@ -53,10 +53,7 @@ struct RocsparseltContractionProblem
     const _rocsparselt_handle* handle;
     rocsparselt_operation      trans_a;
     rocsparselt_operation      trans_b;
-    rocsparselt_order          order_a;
-    rocsparselt_order          order_b;
-    rocsparselt_order          order_c;
-    rocsparselt_order          order_d;
+    rocsparselt_order          order;
 
     // The RocsparseltContractionProblem data members should exactly match
     // Tensile's parameter types, even if rocSPARSELt uses differently
@@ -122,10 +119,7 @@ struct RocsparseltContractionProblem
     RocsparseltContractionProblem(const _rocsparselt_handle*  handle,
                                   rocsparselt_operation       trans_a,
                                   rocsparselt_operation       trans_b,
-                                  rocsparselt_order           order_a,
-                                  rocsparselt_order           order_b,
-                                  rocsparselt_order           order_c,
-                                  rocsparselt_order           order_d,
+                                  rocsparselt_order           order,
                                   int64_t                     m,
                                   int64_t                     n,
                                   int64_t                     k,
@@ -163,10 +157,7 @@ struct RocsparseltContractionProblem
         : handle(handle)
         , trans_a(trans_a)
         , trans_b(trans_b)
-        , order_a(order_a)
-        , order_b(order_b)
-        , order_c(order_c)
-        , order_d(order_d)
+        , order(order)
         , m(m)
         , n(n)
         , k(k)
@@ -218,10 +209,7 @@ struct RocsparseltContractionProblem
     RocsparseltContractionProblem(const _rocsparselt_handle*  handle,
                                   rocsparselt_operation       trans_a,
                                   rocsparselt_operation       trans_b,
-                                  rocsparselt_order           order_a,
-                                  rocsparselt_order           order_b,
-                                  rocsparselt_order           order_c,
-                                  rocsparselt_order           order_d,
+                                  rocsparselt_order           order,
                                   int64_t                     m,
                                   int64_t                     n,
                                   int64_t                     k,
@@ -264,10 +252,7 @@ struct RocsparseltContractionProblem
         : handle(handle)
         , trans_a(trans_a)
         , trans_b(trans_b)
-        , order_a(order_a)
-        , order_b(order_b)
-        , order_c(order_c)
-        , order_d(order_d)
+        , order(order)
         , m(m)
         , n(n)
         , k(k)
@@ -363,10 +348,7 @@ struct RocsparseltContractionProblem
         : handle(handle)
         , trans_a(rocsparselt_operation_none)
         , trans_b(rocsparselt_operation_none)
-        , order_a(rocsparselt_order_column)
-        , order_b(rocsparselt_order_column)
-        , order_c(rocsparselt_order_column)
-        , order_d(rocsparselt_order_column)
+        , order(rocsparselt_order_column)
         , m(m)
         , n(n)
         , k(k)
