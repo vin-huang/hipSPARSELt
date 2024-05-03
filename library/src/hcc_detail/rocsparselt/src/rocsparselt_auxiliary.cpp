@@ -725,6 +725,47 @@ rocsparselt_status rocsparselt_matmul_descr_init(const rocsparselt_handle*    ha
                 _matmulDescr->bias_type = rocsparselt_datatype_f32_r;
                 break;
             }
+
+            _matmulDescr->_op_A = _matmulDescr->op_A;
+            if(_matA->order != _matC->order)
+                _matmulDescr->_op_A = _matmulDescr->op_A == rocsparselt_operation_none
+                                          ? rocsparselt_operation_transpose
+                                          : rocsparselt_operation_none;
+
+            _matmulDescr->_op_B = _matmulDescr->op_B;
+            if(_matB->order != _matC->order)
+                _matmulDescr->_op_B = _matmulDescr->op_B == rocsparselt_operation_none
+                                          ? rocsparselt_operation_transpose
+                                          : rocsparselt_operation_none;
+
+            int64_t lda = _matmulDescr->matrix_A->ld;
+            int64_t ldb = _matmulDescr->matrix_B->ld;
+
+            if(_matmulDescr->is_sparse_a)
+                lda = _matA->c_ld;
+            else
+                ldb = _matB->c_ld;
+
+            if(_matC->order == rocsparselt_order_column)
+            {
+                _matmulDescr->_m           = _matmulDescr->m;
+                _matmulDescr->_n           = _matmulDescr->n;
+                _matmulDescr->_k           = _matmulDescr->k;
+                _matmulDescr->_lda         = lda;
+                _matmulDescr->_ldb         = ldb;
+                _matmulDescr->_is_sparse_a = _matmulDescr->is_sparse_a;
+            }
+            else
+            {
+                _matmulDescr->_swap_ab = true;
+                std::swap(_matmulDescr->_op_A, _matmulDescr->_op_B);
+                _matmulDescr->_m           = _matmulDescr->n;
+                _matmulDescr->_n           = _matmulDescr->m;
+                _matmulDescr->_k           = _matmulDescr->k;
+                _matmulDescr->_lda         = ldb;
+                _matmulDescr->_ldb         = lda;
+                _matmulDescr->_is_sparse_a = !_matmulDescr->is_sparse_a;
+            }
         }
         catch(const rocsparselt_status& status)
         {

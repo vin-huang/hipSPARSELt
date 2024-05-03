@@ -315,14 +315,10 @@ rocsparselt_status ConstructRocSparseLtProblem(const char*                      
     if(beta == nullptr)
         beta = _one.get();
 
-    rocsparselt_operation opA = matmul_descr->op_A;
-    rocsparselt_operation opB = matmul_descr->op_B;
-
     int64_t              metadata_offset;
     const unsigned char* metadata;
 
     // matrix A
-    int64_t lda            = matmul_descr->matrix_A->ld;
     int64_t offset_a       = 0;
     int64_t batch_stride_a = matmul_descr->matrix_A->batch_stride;
     int     num_batches_a  = matmul_descr->matrix_A->num_batches;
@@ -334,7 +330,6 @@ rocsparselt_status ConstructRocSparseLtProblem(const char*                      
     {
 
         batch_stride_a = batch_stride_a == 0 ? 0 : c_ld * c_n;
-        lda            = c_ld;
 
         metadata_offset = rocsparselt_metadata_offset_in_compressed_matrix(
             c_n, c_ld, (batch_stride_a == 0 ? 1 : num_batches_a), matmul_descr->matrix_A->type);
@@ -343,17 +338,14 @@ rocsparselt_status ConstructRocSparseLtProblem(const char*                      
     }
 
     // matrix B
-    int64_t ldb            = matmul_descr->matrix_B->ld;
     int64_t offset_b       = 0;
-    int64_t batch_stride_b = 0;
-    batch_stride_b         = matmul_descr->matrix_B->batch_stride;
+    int64_t batch_stride_b = matmul_descr->matrix_B->batch_stride;
     if(!matmul_descr->is_sparse_a)
     {
         //c_k            = matmul_descr->matrix_B->c_k;
         c_ld           = matmul_descr->matrix_B->c_ld;
         c_n            = matmul_descr->matrix_B->c_n;
         batch_stride_b = batch_stride_b == 0 ? 0 : c_ld * c_n;
-        ldb            = c_ld;
 
         metadata_offset = rocsparselt_metadata_offset_in_compressed_matrix(
             c_n, c_ld, (batch_stride_b == 0 ? 1 : num_batches_a), matmul_descr->matrix_B->type);
@@ -362,16 +354,10 @@ rocsparselt_status ConstructRocSparseLtProblem(const char*                      
     }
 
     // matrix C
-    int64_t ldc            = matmul_descr->matrix_C->ld;
-    int64_t offset_c       = 0;
-    int64_t batch_stride_c = 0;
-    batch_stride_c         = matmul_descr->matrix_C->batch_stride;
+    int64_t offset_c = 0;
 
     // matrix D
-    int64_t ldd            = matmul_descr->matrix_D->ld;
-    int64_t offset_d       = 0;
-    int64_t batch_stride_d = 0;
-    batch_stride_d         = matmul_descr->matrix_D->batch_stride;
+    int64_t offset_d = 0;
 
     // activation
     hipsparselt_activation_type act_type    = hipsparselt_activation_type::none;
@@ -407,101 +393,67 @@ rocsparselt_status ConstructRocSparseLtProblem(const char*                      
         act_args[1] = matmul_descr->activation_tanh_beta;
     }
 
-    float*  bias_vector = matmul_descr->bias_pointer;
-    int64_t bias_stride = matmul_descr->bias_stride;
+    int64_t   _batch_stride_a, _offset_a;
+    int64_t   _batch_stride_b, _offset_b;
+    const Ti *_a, *_b;
 
-    rocsparselt_order     orderA = matmul_descr->matrix_A->order;
-    rocsparselt_order     orderB = matmul_descr->matrix_B->order;
-    rocsparselt_order     orderC = matmul_descr->matrix_C->order;
-    rocsparselt_order     orderD = matmul_descr->matrix_D->order;
-    rocsparselt_operation _opA, _opB;
-    int64_t               _m, _n, _k;
-    int64_t               _lda, _batch_stride_a, _offset_a;
-    int64_t               _ldb, _batch_stride_b, _offset_b;
-    const Ti *            _a, *_b;
-    bool                  _is_sparse_a;
-
-    if(orderA != orderC)
-        opA = opA == rocsparselt_operation_none ? rocsparselt_operation_transpose
-                                                : rocsparselt_operation_none;
-
-    if(orderB != orderC)
-        opB = opB == rocsparselt_operation_none ? rocsparselt_operation_transpose
-                                                : rocsparselt_operation_none;
-
-    if(orderC == rocsparselt_order_column)
+    if(!matmul_descr->_swap_ab)
     {
-        _opA            = opA;
-        _opB            = opB;
-        _m              = matmul_descr->m;
-        _n              = matmul_descr->n;
-        _k              = matmul_descr->k;
-        _lda            = lda;
         _batch_stride_a = batch_stride_a;
         _offset_a       = offset_a;
-        _ldb            = ldb;
         _batch_stride_b = batch_stride_b;
         _offset_b       = offset_b;
         _a              = a;
         _b              = b;
-        _is_sparse_a    = matmul_descr->is_sparse_a;
     }
     else
     {
-        _opA            = opB;
-        _opB            = opA;
-        _n              = matmul_descr->m;
-        _m              = matmul_descr->n;
-        _k              = matmul_descr->k;
-        _lda            = ldb;
         _batch_stride_a = batch_stride_b;
         _offset_a       = offset_b;
-        _ldb            = lda;
         _batch_stride_b = batch_stride_a;
         _offset_b       = offset_a;
         _a              = b;
         _b              = a;
-        _is_sparse_a    = !matmul_descr->is_sparse_a;
     }
 
     (*prob) = new RocsparseltContractionProblem<Ti, To, Tc>(matmul_descr->handle,
-                                                            _opA,
-                                                            _opB,
-                                                            orderD,
-                                                            _m,
-                                                            _n,
-                                                            _k,
+                                                            matmul_descr->_op_A,
+                                                            matmul_descr->_op_B,
+                                                            matmul_descr->matrix_D->order,
+                                                            matmul_descr->_m,
+                                                            matmul_descr->_n,
+                                                            matmul_descr->_k,
                                                             alpha,
                                                             _a,
                                                             nullptr,
-                                                            _lda,
+                                                            matmul_descr->_lda,
                                                             _batch_stride_a,
                                                             _offset_a,
                                                             _b,
                                                             nullptr,
-                                                            _ldb,
+                                                            matmul_descr->_ldb,
                                                             _batch_stride_b,
                                                             _offset_b,
                                                             beta,
                                                             c,
                                                             nullptr,
-                                                            ldc,
-                                                            batch_stride_c,
+                                                            matmul_descr->matrix_C->ld,
+                                                            matmul_descr->matrix_C->batch_stride,
                                                             offset_c,
                                                             d,
                                                             nullptr,
-                                                            ldd,
-                                                            batch_stride_d,
+                                                            matmul_descr->matrix_D->ld,
+                                                            matmul_descr->matrix_D->batch_stride,
                                                             offset_d,
                                                             num_batches_a,
                                                             strided_batch,
-                                                            _is_sparse_a,
+                                                            matmul_descr->_is_sparse_a,
                                                             metadata,
                                                             act_type,
                                                             act_args[0],
                                                             act_args[1],
-                                                            bias_vector,
-                                                            bias_stride,
+                                                            matmul_descr->bias_pointer,
+                                                            matmul_descr->bias_stride,
                                                             matmul_descr->bias_type,
                                                             workspace,
                                                             workspaceSize,
