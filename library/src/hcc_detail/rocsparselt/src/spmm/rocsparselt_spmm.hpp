@@ -165,6 +165,13 @@ inline rocsparselt_status rocsparselt_spmm_template(const char*                 
                 rs_status = spmm_typecasting<int8_t, __half, float>(EX_TYPECASTING_PARM);
             }
         }
+        else if(c_type == rocsparselt_datatype_bf16_r && d_type == rocsparselt_datatype_bf16_r)
+        {
+            if(compute_type == rocsparselt_compute_i32)
+            {
+                rs_status = spmm_typecasting<int8_t, hip_bfloat16, float>(EX_TYPECASTING_PARM);
+            }
+        }
     }
     else
     {

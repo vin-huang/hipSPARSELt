@@ -1185,6 +1185,12 @@ rocsparselt_status
                 status = findTopConfigs<int8_t, __half, float>(
                     _matmulDescr, &(tmpAlgSelection.configs[0]), &config_max_id, requestConfigs);
             }
+            else if(in_type == rocsparselt_datatype_i8_r && out_type == rocsparselt_datatype_bf16_r
+                    && compute_type == rocsparselt_compute_i32)
+            {
+                status = findTopConfigs<int8_t, hip_bfloat16, float>(
+                    _matmulDescr, &(tmpAlgSelection.configs[0]), &config_max_id, requestConfigs);
+            }
             if(status != rocsparselt_status_success)
                 return status;
 #else

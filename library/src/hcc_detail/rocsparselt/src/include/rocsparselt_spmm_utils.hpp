@@ -328,9 +328,9 @@ inline rocsparselt_status validateMatmulDescrArgs(const _rocsparselt_handle* han
         }
         break;
     case rocsparselt_datatype_i8_r:
-        // I8/I8/I and I8/H/I
+        // I8/I8/I, I8/H/I, I8/B/I, I8/I/I,
         if(type_a != type_b || type_c != type_d
-           || (type_a != type_d && type_d != rocsparselt_datatype_f16_r))
+           || (type_a != type_d && !((type_d == rocsparselt_datatype_f16_r) || (type_d == rocsparselt_datatype_bf16_r))))
         {
             log_error(handle, __func__, "datatype of matrices are inconsistent");
             return rocsparselt_status_not_implemented;
