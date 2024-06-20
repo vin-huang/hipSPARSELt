@@ -457,7 +457,7 @@ static int parse_arguments(int                    argc,
                            int64_t&               stride,
                            int&                   batch_count,
                            hipsparseOperation_t&  trans,
-                           hipsparseLtDatatype_t& type,
+                           hipDataType&           type,
                            bool&                  header,
                            bool&                  sparse_b,
                            bool&                  verbose)
@@ -529,11 +529,11 @@ static int parse_arguments(int                    argc,
                     }
                     else if(strncmp(argv[i], "b", 1) == 0)
                     {
-                        type = HIPSPARSELT_R_16BF;
+                        type = HIP_R_16BF;
                     }
                     else if(strncmp(argv[i], "i8", 1) == 0)
                     {
-                        type = HIPSPARSELT_R_8I;
+                        type = HIP_R_8I;
                     }
                     else
                     {
@@ -621,7 +621,7 @@ void run(int64_t               m,
          int64_t               stride,
          int                   batch_count,
          hipsparseOperation_t  trans,
-         hipsparseLtDatatype_t type,
+         hipDataType           type,
          bool                  sparse_b,
          bool                  verbose)
 {
@@ -771,11 +771,11 @@ void run(int64_t               m,
     CHECK_HIPSPARSELT_ERROR(hipsparseLtMatDescSetAttribute(
         &handle, sparse_b? &matB : &matA, HIPSPARSELT_MAT_BATCH_STRIDE, &stride, sizeof(stride)));
 
-    auto compute_type = type == HIPSPARSELT_R_8I ? HIPSPARSELT_COMPUTE_32I :
+    auto compute_type = type == HIP_R_8I ? HIPSPARSELT_COMPUTE_32I :
 #ifdef __HIP_PLATFORM_AMD__
-                                                 HIPSPARSELT_COMPUTE_32F;
+                                          HIPSPARSELT_COMPUTE_32F;
 #else
-                                                 HIPSPARSELT_COMPUTE_16F;
+                                          HIPSPARSELT_COMPUTE_16F;
 #endif
 
     CHECK_HIPSPARSELT_ERROR(hipsparseLtMatmulDescriptorInit(&handle,
@@ -1040,8 +1040,8 @@ int main(int argc, char* argv[])
     // initialize to invalid value to detect if values not specified on command line
     int64_t m = invalid_int64, n = invalid_int64, ld = invalid_int64, stride = invalid_int64;
 
-    int                   batch_count = invalid_int;
-    hipsparseLtDatatype_t type        = HIPSPARSELT_R_16F;
+    int         batch_count = invalid_int;
+    hipDataType type        = HIP_R_16F;
 
     bool verbose = false;
     bool header  = false;
@@ -1080,15 +1080,15 @@ int main(int argc, char* argv[])
 
     switch(type)
     {
-    case HIPSPARSELT_R_16F:
+    case HIP_R_16F:
         std::cout << "H_";
         run<__half>(m, n, ld, stride, batch_count, trans, type, sparse_b, verbose);
         break;
-    case HIPSPARSELT_R_16BF:
+    case HIP_R_16BF:
         std::cout << "BF16_";
         run<hip_bfloat16>(m, n, ld, stride, batch_count, trans, type, sparse_b, verbose);
         break;
-    case HIPSPARSELT_R_8I:
+    case HIP_R_8I:
         std::cout << "I8_";
         run<int8_t>(m, n, ld, stride, batch_count, trans, type, sparse_b, verbose);
         break;

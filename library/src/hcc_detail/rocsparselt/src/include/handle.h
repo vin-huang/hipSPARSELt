@@ -162,7 +162,7 @@ struct _rocsparselt_mat_descr
     // memory alignment in bytes
     uint32_t alignment;
     // data type of the matrix
-    rocsparselt_datatype type;
+    hipDataType type;
     // memory layout
     rocsparselt_order order;
     // matrix sparsity ratio
@@ -278,7 +278,7 @@ struct _rocsparselt_matmul_descr
     float                activation_gelu_scaling    = 1.0f;
     float*               bias_pointer               = nullptr;
     int64_t              bias_stride                = 0;
-    rocsparselt_datatype bias_type;
+    hipDataType          bias_type;
     int64_t              m           = 0;
     int64_t              n           = 0;
     int64_t              k           = 0;

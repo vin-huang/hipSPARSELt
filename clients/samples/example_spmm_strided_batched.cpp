@@ -765,31 +765,31 @@ int main(int argc, char* argv[])
                                                                     col_a,
                                                                     lda,
                                                                     16,
-                                                                    HIPSPARSELT_R_16F,
+                                                                    HIP_R_16F,
                                                                     HIPSPARSE_ORDER_COL,
                                                                     HIPSPARSELT_SPARSITY_50_PERCENT));
         CHECK_HIPSPARSELT_ERROR(hipsparseLtDenseDescriptorInit(
-            &handle, &matB, row_b, col_b, ldb, 16, HIPSPARSELT_R_16F, HIPSPARSE_ORDER_COL));
+            &handle, &matB, row_b, col_b, ldb, 16, HIP_R_16F, HIPSPARSE_ORDER_COL));
     }
     else
     {
         CHECK_HIPSPARSELT_ERROR(hipsparseLtDenseDescriptorInit(
-            &handle, &matA, row_a, col_a, lda, 16, HIPSPARSELT_R_16F, HIPSPARSE_ORDER_COL));
+            &handle, &matA, row_a, col_a, lda, 16, HIP_R_16F, HIPSPARSE_ORDER_COL));
         CHECK_HIPSPARSELT_ERROR(hipsparseLtStructuredDescriptorInit(&handle,
                                                                     &matB,
                                                                     row_b,
                                                                     col_b,
                                                                     ldb,
                                                                     16,
-                                                                    HIPSPARSELT_R_16F,
+                                                                    HIP_R_16F,
                                                                     HIPSPARSE_ORDER_COL,
                                                                     HIPSPARSELT_SPARSITY_50_PERCENT));
     }
 
     CHECK_HIPSPARSELT_ERROR(hipsparseLtDenseDescriptorInit(
-        &handle, &matC, row_c, col_c, ldc, 16, HIPSPARSELT_R_16F, HIPSPARSE_ORDER_COL));
+        &handle, &matC, row_c, col_c, ldc, 16, HIP_R_16F, HIPSPARSE_ORDER_COL));
     CHECK_HIPSPARSELT_ERROR(hipsparseLtDenseDescriptorInit(
-        &handle, &matD, row_c, col_c, ldd, 16, HIPSPARSELT_R_16F, HIPSPARSE_ORDER_COL));
+        &handle, &matD, row_c, col_c, ldd, 16, HIP_R_16F, HIPSPARSE_ORDER_COL));
 
     CHECK_HIPSPARSELT_ERROR(hipsparseLtMatDescSetAttribute(
         &handle, &matA, HIPSPARSELT_MAT_NUM_BATCHES, &batch_count, sizeof(batch_count)));
