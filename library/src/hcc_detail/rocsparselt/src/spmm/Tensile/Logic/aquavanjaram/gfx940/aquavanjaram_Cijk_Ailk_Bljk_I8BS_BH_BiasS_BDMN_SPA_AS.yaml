@@ -73,7 +73,7 @@
   UseInitialStridesAB: false
   UseInitialStridesCD: false
   UseScaleAB: false
-  UseScaleAlphaVec: false
+  UseScaleAlphaVec: 3
   UseScaleDVec: false
 - - 1LDSBuffer: 0
     ActivationAlt: false
@@ -287,7 +287,7 @@
       UseInitialStridesAB: false
       UseInitialStridesCD: false
       UseScaleAB: false
-      UseScaleAlphaVec: false
+      UseScaleAlphaVec: 3
       UseScaleDVec: false
     ScheduleGlobalRead: 1
     ScheduleIterAlg: 3
@@ -557,7 +557,7 @@
       UseInitialStridesAB: false
       UseInitialStridesCD: false
       UseScaleAB: false
-      UseScaleAlphaVec: false
+      UseScaleAlphaVec: 3
       UseScaleDVec: false
     ScheduleGlobalRead: 1
     ScheduleIterAlg: 3
@@ -816,7 +816,7 @@
       UseInitialStridesAB: false
       UseInitialStridesCD: false
       UseScaleAB: false
-      UseScaleAlphaVec: false
+      UseScaleAlphaVec: 3
       UseScaleDVec: false
     ScheduleGlobalRead: 1
     ScheduleIterAlg: 3
@@ -1083,7 +1083,7 @@
       UseInitialStridesAB: false
       UseInitialStridesCD: false
       UseScaleAB: false
-      UseScaleAlphaVec: false
+      UseScaleAlphaVec: 3
       UseScaleDVec: false
     ScheduleGlobalRead: 1
     ScheduleIterAlg: 3
@@ -1342,7 +1342,7 @@
       UseInitialStridesAB: false
       UseInitialStridesCD: false
       UseScaleAB: false
-      UseScaleAlphaVec: false
+      UseScaleAlphaVec: 3
       UseScaleDVec: false
     ScheduleGlobalRead: 1
     ScheduleIterAlg: 3
@@ -1609,7 +1609,7 @@
       UseInitialStridesAB: false
       UseInitialStridesCD: false
       UseScaleAB: false
-      UseScaleAlphaVec: false
+      UseScaleAlphaVec: 3
       UseScaleDVec: false
     ScheduleGlobalRead: 1
     ScheduleIterAlg: 3
@@ -1868,7 +1868,7 @@
       UseInitialStridesAB: false
       UseInitialStridesCD: false
       UseScaleAB: false
-      UseScaleAlphaVec: false
+      UseScaleAlphaVec: 3
       UseScaleDVec: false
     ScheduleGlobalRead: 1
     ScheduleIterAlg: 3
@@ -2124,7 +2124,7 @@
       UseInitialStridesAB: false
       UseInitialStridesCD: false
       UseScaleAB: false
-      UseScaleAlphaVec: false
+      UseScaleAlphaVec: 3
       UseScaleDVec: false
     ScheduleGlobalRead: 1
     ScheduleIterAlg: 3
@@ -2391,7 +2391,7 @@
       UseInitialStridesAB: false
       UseInitialStridesCD: false
       UseScaleAB: false
-      UseScaleAlphaVec: false
+      UseScaleAlphaVec: 3
       UseScaleDVec: false
     ScheduleGlobalRead: 1
     ScheduleIterAlg: 3
