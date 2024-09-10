@@ -235,6 +235,39 @@ rocsparselt_status rocsparselt_matmul_impl(const char*                    caller
         log_info(_handle, caller, "found the best config_id", config_id);
         _plan->alg_selection->config_id = config_id;
     }
+
+    if(_handle->layer_mode & rocsparselt_layer_mode_log_dump_tensor)
+    {
+        auto datatype_bpe = [](hipDataType type) {
+            switch(type)
+            {
+            case HIP_R_32F:
+                return 4;
+            case HIP_R_16F:
+            case HIP_R_16BF:
+                return 2;
+            case HIP_R_8F_E4M3_FNUZ:
+            case HIP_R_8F_E5M2_FNUZ:
+            case HIP_R_8I:
+                return 1;
+            default:
+                return 0;
+            }
+        };
+
+        auto matrix = _plan->matmul_descr->matrix_D;
+        auto bpe = datatype_bpe(matrix->type);
+        size_t dSize = _plan->matmul_descr->m * _plan->matmul_descr->n * bpe;
+        void* hD = (void*)malloc(dSize);
+        hipDeviceSynchronize();
+        hipMemcpy(hD, d_D, dSize, hipMemcpyDeviceToHost);
+        log_tensor(_handle, __func__, _rocsparselt_tensor_data("spmm output:", hD, matrix->type, _plan->matmul_descr->m, _plan->matmul_descr->n,
+                                                                matrix->num_batches,
+                                                                matrix->order == rocsparselt_order_row ? matrix->ld : 1,
+                                                                matrix->order == rocsparselt_order_row ? 1 : matrix->ld,
+                                                                matrix->batch_stride));
+    }
+
     return status;
 }
 

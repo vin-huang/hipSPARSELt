@@ -142,6 +142,8 @@ const char* rocsparselt_layer_mode2string(rocsparselt_layer_mode layer_mode)
         return "Info";
     case rocsparselt_layer_mode_log_api:
         return "Api";
+    case rocsparselt_layer_mode_log_dump_tensor:
+        return "Tensor";
     default:
         return "Invalid";
     }

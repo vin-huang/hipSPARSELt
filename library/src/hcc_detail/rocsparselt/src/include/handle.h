@@ -411,4 +411,41 @@ struct _rocsparselt_matmul_plan
     uintptr_t is_init = 0;
 };
 
+
+struct _rocsparselt_tensor_data
+{
+    _rocsparselt_tensor_data(char *text,
+                            void* data,
+                            hipDataType type,
+                            int64_t m,
+                            int64_t n,
+                            int64_t num_batches,
+                            int64_t stride0,
+                            int64_t stride1,
+                            int64_t batch_stride):
+                            text(text),
+                            data(data),
+                            type(type),
+                            m(m),
+                            n(n),
+                            num_batches(num_batches),
+                            stride0(stride0),
+                            stride1(stride1),
+                            batch_stride(batch_stride){}
+    ~_rocsparselt_tensor_data() {}
+
+    friend std::ostream& operator<<(std::ostream& stream,
+                                const _rocsparselt_tensor_data& t);
+
+    char* text;
+    void* data;
+    hipDataType type;
+    int64_t m;
+    int64_t n;
+    int64_t num_batches;
+    int64_t stride0;
+    int64_t stride1;
+    int64_t batch_stride;
+};
+
 #endif // HANDLE_H

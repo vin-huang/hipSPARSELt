@@ -182,12 +182,13 @@ typedef enum rocsparselt_pointer_mode_
  */
 typedef enum rocsparselt_layer_mode
 {
-    rocsparselt_layer_mode_none      = 0, /**< layer is not active. */
-    rocsparselt_layer_mode_log_error = 1, /**< layer is in error mode. */
-    rocsparselt_layer_mode_log_trace = 2, /**< layer is in trace mode. */
-    rocsparselt_layer_mode_log_hints = 4, /**< layer is in hints mode. */
-    rocsparselt_layer_mode_log_info  = 8, /**< layer is in info mode. */
-    rocsparselt_layer_mode_log_api   = 16, /**< layer is in api mode. */
+    rocsparselt_layer_mode_none            = 0, /**< layer is not active. */
+    rocsparselt_layer_mode_log_error       = 1, /**< layer is in error mode. */
+    rocsparselt_layer_mode_log_trace       = 2, /**< layer is in trace mode. */
+    rocsparselt_layer_mode_log_hints       = 4, /**< layer is in hints mode. */
+    rocsparselt_layer_mode_log_info        = 8, /**< layer is in info mode. */
+    rocsparselt_layer_mode_log_api         = 16, /**< layer is in api mode. */
+    rocsparselt_layer_mode_log_dump_tensor = 32
 } rocsparselt_layer_mode;
 
 /*! \ingroup types_module
@@ -199,12 +200,13 @@ typedef enum rocsparselt_layer_mode
  */
 typedef enum rocsparselt_layer_level
 {
-    rocsparselt_layer_level_none      = 0, /**< layer is not active. */
-    rocsparselt_layer_level_log_error = 1, /**< layer is in error mode. */
-    rocsparselt_layer_level_log_trace = 2, /**< layer is in trace mode. */
-    rocsparselt_layer_level_log_hints = 3, /**< layer is in hints mode. */
-    rocsparselt_layer_level_log_info  = 4, /**< layer is in info mode. */
-    rocsparselt_layer_level_log_api   = 5, /**< layer is in api mode. */
+    rocsparselt_layer_level_none            = 0, /**< layer is not active. */
+    rocsparselt_layer_level_log_error       = 1, /**< layer is in error mode. */
+    rocsparselt_layer_level_log_trace       = 2, /**< layer is in trace mode. */
+    rocsparselt_layer_level_log_hints       = 3, /**< layer is in hints mode. */
+    rocsparselt_layer_level_log_info        = 4, /**< layer is in info mode. */
+    rocsparselt_layer_level_log_api         = 5, /**< layer is in api mode. */
+    rocsparselt_layer_level_log_dump_tensor = 6
 } rocsparselt_layer_level;
 
 /*! \ingroup types_module

@@ -670,7 +670,7 @@ rocsparselt_status rocsparselt_smfmac_compress2(const rocsparselt_handle*    han
     get_compress_matrix_size(
         isSparseA, op, _sparseMatDescr, m, n, stride0, stride1, c_stride0, c_stride1);
 
-    return rocsparselt_smfmac_compress_impl(_handle,
+    auto status =  rocsparselt_smfmac_compress_impl(_handle,
                                             _sparseMatDescr,
                                             m,
                                             n,
@@ -687,6 +687,56 @@ rocsparselt_status rocsparselt_smfmac_compress2(const rocsparselt_handle*    han
                                             d_compressed,
                                             d_compressBuffer,
                                             stream);
+    if(_handle->layer_mode & rocsparselt_layer_mode_log_dump_tensor)
+    {
+        hipDataType       type  = _sparseMatDescr->type;
+        int         num_batches  = _sparseMatDescr->num_batches;
+        int64_t     batch_stride = _sparseMatDescr->batch_stride;
+
+        //set the number of batches to 1 since in the broadcast case, we only care about contents in first batch.
+        if(batch_stride == 0) //boardcast case.
+        {
+            num_batches = 1;
+        }
+        int64_t metadata_offset
+            = rocsparselt_metadata_offset_in_compressed_matrix(_sparseMatDescr->c_n,
+                                                            _sparseMatDescr->c_ld,
+                                                            num_batches, type);
+        hipDeviceSynchronize();
+
+        auto datatype_bpe = [](hipDataType type) {
+            switch(type)
+            {
+            case HIP_R_32F:
+                return 4;
+            case HIP_R_16F:
+            case HIP_R_16BF:
+                return 2;
+            case HIP_R_8F_E4M3_FNUZ:
+            case HIP_R_8F_E5M2_FNUZ:
+            case HIP_R_8I:
+                return 1;
+            default:
+                return 0;
+            }
+        };
+
+        auto bpe = datatype_bpe(_sparseMatDescr->type);
+
+        int64_t dense_size = metadata_offset * bpe;
+        hipsparselt_cout << metadata_offset << std::endl;
+        void* *hD = (void*)malloc(dense_size);
+        void* *hC = (void*)malloc(metadata_offset);
+        hipMemcpy(hD, d_dense, dense_size, hipMemcpyDeviceToHost);
+        hipMemcpy(hC, d_compressed, metadata_offset, hipMemcpyDeviceToHost);
+
+        log_tensor(_handle, __func__, _rocsparselt_tensor_data("dense", hD, type, _sparseMatDescr->m, _sparseMatDescr->n, num_batches, _sparseMatDescr->order == rocsparselt_order_row ? ld : 1, _sparseMatDescr->order == rocsparselt_order_row ? 1 : ld, batch_stride));
+        log_tensor(_handle, __func__, _rocsparselt_tensor_data("compressed", hC, type, _sparseMatDescr->c_n, _sparseMatDescr->c_ld, num_batches, _sparseMatDescr->order == rocsparselt_order_row ? _sparseMatDescr->c_ld : 1, _sparseMatDescr->order == rocsparselt_order_row ? 1 : _sparseMatDescr->c_ld, batch_stride));
+        free(hC);
+        free(hD);
+    }
+    return status;
+
 }
 
 #ifdef __cplusplus

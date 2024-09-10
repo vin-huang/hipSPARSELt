@@ -31,7 +31,8 @@
 #include "utility.hpp"
 
 #include <hip/hip_runtime.h>
-
+#include <stdio.h>
+#include <string.h>
 ROCSPARSELT_KERNEL void init_kernel(){};
 
 void _rocsparselt_handle::init()
@@ -52,6 +53,8 @@ void _rocsparselt_handle::init()
         layer_mode = rocsparselt_layer_mode_none;
         switch(atoi(str_layer_mode))
         {
+        case rocsparselt_layer_level_log_dump_tensor:
+            layer_mode |= rocsparselt_layer_mode_log_dump_tensor;
         case rocsparselt_layer_level_log_api:
             layer_mode |= rocsparselt_layer_mode_log_api;
         case rocsparselt_layer_level_log_info:
@@ -181,4 +184,49 @@ std::ostream& operator<<(std::ostream& stream, const _rocsparselt_matmul_plan& t
            << "ptr=" << (&t) << ", matmul=" << *(t.matmul_descr)
            << ", alg_selection=" << *(t.alg_selection) << "}";
     return stream;
+}
+
+template<typename T>
+std::ostream& dump_tensor_data(std::ostream& stream, const char* name, T* A, int64_t n1, int64_t n2, int64_t n3, int64_t s1, int64_t s2, int64_t s3)
+{
+    constexpr bool is_int = std::is_same<T, int8_t>();
+    using Tp              = std::conditional_t<is_int, int32_t, float>;
+    // n1, n2, n3 are matrix dimensions, sometimes called m, n, batch_count
+    // s1, s1, s3 are matrix strides, sometimes called 1, lda, stride_a
+    stream << "---------- " << name << "(" << n1 << "x" << n2 << "," << n3 <<"," << s1<<"," << s2<<"," << s3 << ") ----------\n";
+    int max_size = 128;
+
+    for(int i3 = 0; i3 < n3 && i3 < max_size; i3++)
+    {
+        for(int i1 = 0; i1 < n1 && i1 < max_size; i1++)
+        {
+            for(int i2 = 0; i2 < n2 && i2 < max_size; i2++)
+            {
+                stream << static_cast<Tp>(A[(i1 * s1) + (i2 * s2) + (i3 * s3)]) << "|";
+            }
+            stream << "\n";
+        }
+        if(i3 < (n3 - 1) && i3 < (max_size - 1))
+            stream << "\n";
+    }
+    return stream;
+}
+
+std::ostream& operator<<(std::ostream& stream, const _rocsparselt_tensor_data& t)
+{
+    switch(t.type)
+    {
+    case HIP_R_32F:
+       return dump_tensor_data<float>(stream, t.text, reinterpret_cast<float*>(t.data), t.m, t.n, t.num_batches, t.stride0, t.stride1, t.batch_stride);
+    case HIP_R_16BF:
+       return dump_tensor_data<hip_bfloat16>(stream, t.text, static_cast<hip_bfloat16*>(t.data), t.m, t.n, t.num_batches, t.stride0, t.stride1, t.batch_stride);
+    case HIP_R_16F:
+       return dump_tensor_data<half>(stream, t.text, static_cast<half*>(t.data), t.m, t.n, t.num_batches, t.stride0, t.stride1, t.batch_stride);
+    case HIP_R_8I:
+       return dump_tensor_data<int8_t>(stream, t.text, static_cast<int8_t*>(t.data), t.m, t.n, t.num_batches, t.stride0, t.stride1, t.batch_stride);
+    case HIP_R_8F_E4M3_FNUZ:
+    case HIP_R_8F_E5M2_FNUZ:
+    default:
+        return stream;
+    }
 }

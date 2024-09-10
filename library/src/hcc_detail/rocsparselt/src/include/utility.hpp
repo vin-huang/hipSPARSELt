@@ -187,6 +187,18 @@ void log_api(const _rocsparselt_handle* handle, const char* func, H head, Ts&&..
     log_base(handle, rocsparselt_layer_mode_log_api, func, head, std::forward<Ts>(xs)...);
 }
 
+// if trace logging is turned on with
+// (handle->layer_mode & rocsparselt_layer_mode_log_api) == true
+// then
+// log_function will call log_arguments to log function
+// arguments with a comma separator
+template <typename H, typename... Ts>
+void log_tensor(const _rocsparselt_handle* handle, const char* func, H head, Ts&&... xs)
+{
+    log_base(handle, rocsparselt_layer_mode_log_dump_tensor, func, head, std::forward<Ts>(xs)...);
+}
+
+
 // if bench logging is turned on with
 // (handle->layer_mode & rocsparselt_layer_mode_log_bench) == true
 // then
