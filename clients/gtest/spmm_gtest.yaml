@@ -541,6 +541,23 @@ Tests:
   activation_arg2 : [-1.0, 0.0, 0.5, 1.0, 3.0]
   sparse_b: [true, false]
 
+- name: spmm_logging
+  category: pre_checkin
+  function:
+    spmm: *hpa_half_precision
+  M: 128
+  N: 128
+  K: 128
+  transA: N
+  transB: N
+  alpha: 1
+  beta: 0
+  activation_type: clippedrelu
+  activation_arg1 : [0.5]
+  activation_arg2 : [1.0]
+  sparse_b: [false]
+  logging: [5]
+
 - name: aux_plan_assign
   category: quick
   function:

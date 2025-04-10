@@ -41,6 +41,39 @@
 #include <cstddef>
 #include <hipsparselt/hipsparselt.h>
 #include <omp.h>
+#include <stdlib.h>
+
+class Logger
+{
+
+public:
+    Logger(int log_level)
+    {
+        this->log_level = log_level;
+        this->pre_log_level = -1;
+        if(this->log_level)
+        {
+            char* str_layer_mode;
+            if((str_layer_mode = getenv("HIPSPARSELT_LOG_LEVEL")) != NULL)
+            {
+                this->pre_log_level = atoi(str_layer_mode);
+            }
+            setenv("HIPSPARSELT_LOG_LEVEL", std::to_string(this->log_level).c_str(), 1);
+        }
+    }
+    ~Logger()
+    {
+        if(this->log_level)
+        {
+            if(this->pre_log_level == -1)
+                unsetenv("HIPSPARSELT_LOG_LEVEL");
+            else 
+                setenv("HIPSPARSELT_LOG_LEVEL", std::to_string(this->pre_log_level).c_str(), 1);
+        }
+    }
+    int log_level;
+    int pre_log_level;
+};
 
 template <typename T, typename Tb = T, typename To = T, hipsparseOrder_t order>
 void bias(int64_t m, int64_t n, int64_t ld, T* src, To* dest, Tb* bias)
@@ -244,6 +277,9 @@ template <typename Ti,
           hipsparselt_batch_type btype = hipsparselt_batch_type::none>
 void testing_spmm(const Arguments& arg)
 {
+
+    Logger logger(arg.logging);
+
     hipsparseOperation_t transA = char_to_hipsparselt_operation(arg.transA);
     hipsparseOperation_t transB = char_to_hipsparselt_operation(arg.transB);
 

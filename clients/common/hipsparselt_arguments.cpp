@@ -103,6 +103,18 @@ void Arguments::init()
     HMM             = false;
     search          = false;
     search_iters    = 10;
+
+    sparse_b     = false;
+    func_version = 1;
+
+    alpha_vector_scaling = false;
+
+    orderA = 'C';
+    orderB = 'C';
+    orderC = 'C';
+    orderD = 'C';
+
+    logging = -1;
 }
 
 // Function to print Arguments out to stream in YAML format
