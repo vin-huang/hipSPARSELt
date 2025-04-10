@@ -81,6 +81,12 @@ Tests:
   transA_transB: *transA_transB_range
   alpha_beta: *alpha_beta_range
   sparse_b: [true, false]
+  bias_vector: [true]
+  bias_stride: [0, -1, 256]
+  bias_type: [f32_r, f16_r]
+  sparse_b: [true, false]
+  alpha_vector_scaling: [true, false]
+  search: [true, false]
 
 - name: spmm_medium_alt
   category: pre_checkin
@@ -536,7 +542,7 @@ Tests:
   sparse_b: [true, false]
 
 - name: aux_plan_assign
-  category: pre_checkin
+  category: quick
   function:
     aux_plan_assign: *hpa_int8_precision
   M: 128

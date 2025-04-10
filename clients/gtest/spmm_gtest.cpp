@@ -104,6 +104,11 @@ namespace
 
             if(strstr(arg.function, "_bad_arg") == nullptr)
             {
+                if(arg.search)
+                {
+                    name << "_search"  << arg.search_iters;
+                }
+
                 name << '_' << (arg.sparse_b ? "SB" : "SA");
 
                 if(arg.activation_type != hipsparselt_activation_type::none)
